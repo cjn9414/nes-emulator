@@ -73,7 +73,21 @@ I really want to learn much more about low-level programming, specifically progr
       * Branches - Break sequential execution sequence, resuming from a specified address if a condition is met (involves examining specific bit in the status register).
       * Status Register Operations - Set or clear a flag in the status register.
       * System Functions - Perform rarely used functions.
-* 8-bit 6502 processor for the PPU
-* NES used memory mapped I/O for the CPU to communicate to other components
+* 8-bit 2CO2 processor for the PPU
+  * Registers are mostly located in the I/O registers section ($2000-$2007 and $4014)
+    * Additional special registers used for screen scrolling
+  * Has its own memory (VRAM) 
+    * Can address 64 KB of memory, but only has 16 KB of RAM
+    * Any address above $3FFF is wrapped around ($4000-$FFFF) becomes a mirror of locations $0000-$3FFF
+    * Reading and writing to memory is done using I/O registers at $2006 and $2007 in CPU memory
+      * This is done using V-Blank at the end of a frame, as it affects addresses used while drawing the screen.
+  * PPU memory uses 16-bit addresses but I/O registers only use 8 bits
+    * As a result, two writes to $2006 are required to set the address.
+      * Data can then be read from or written to $2007
+      * After each write to $2007, the address is either incremented by 1 or 32 (dependent on bit 2 of $2000)
+  * PPU also has a separate 256 byte area of memory to store sprite attributes (SPR-RAM). Sprites can be found in pattern tables
+  
+
+* NES uses memory mapped I/O for the CPU to communicate to other components
 
 
