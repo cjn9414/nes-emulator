@@ -10,6 +10,7 @@ I really want to learn much more about low-level programming, specifically progr
 All of the information that follows was found [here](http://www.nesdev.com/NESDoc.pdf). I have simply taken notes on what was found from this manual, highlighting the aspects that I found most important.
 
 ## Hardware
+* NES uses memory mapped I/O for the CPU to communicate to other components
 * 8-bit 2A03 processor for the CPU, developed by NMOS technology
   * Very similar to 8-bit 6502, but is equipped to handle sound, but lacking BCD ability.
   * Little endian processor - addresses are stored in memory least significant byte first
@@ -192,7 +193,7 @@ All of the information that follows was found [here](http://www.nesdev.com/NESDo
       * Both are updated by writes to registers and as the frame is drawn
   * Television standards
     * Different versions of the system were created for two different television formats (NTSC and PAL)
-    * Images on screen displayed by stream of electrons which light the screen left to right
+    * Images on screens displayed by stream of electrons which light the screen left to right
     * A single line of pixels referred to as a scanline
     * H-Blank - time taken for electron to move to a new line and to the left at the end of a scanline
     * V-Blank - time taken for electron to move back to top left of the screen after drawing the entire screen
@@ -201,5 +202,70 @@ All of the information that follows was found [here](http://www.nesdev.com/NESDo
       * Top and bottom eight lines are cut off
       * Takes additional 3 scanlines worth of CPU cycles to enter V-Blank
       * V-Blank period takes additional 20 scanlines worth of CPU cycles before the next frame is ready to be drawn
-* NES uses memory mapped I/O for the CPU to communicate to other components
-
+* Game Hardware
+  * Cartridges
+    * NES games come on a ROM chip inside a Game Pak
+    * Some cartridges also feature RAM powered by a battery, which allow the game to be saved
+    * Cartridge connects to NES via a 72-pin connector
+    * Cartridge contains CHR-ROM chip to store pattern tables (graphics data for the game)
+    * Cartridge contains PRG-ROM chip to store program code for the game
+  * Memory Mapper (MMC) - Switching hardware in game cartridges to allow the NES to swap data in and out of memory given the limited addressing of the NES
+    * When the system requires access to data on ROM bank that isn't currently loaded into memory, software indicates need to switch banks
+      * The selected bank is then loaded into memory and replaces the existing contents
+    * UNROM switches allow switching of only PRG-ROM banks
+      * Maximum number of 16 KB PRG-ROM banks using UNROM is 8
+    * CNROM switches allow switching of only CHR-ROM banks
+    * MMC1 allowed switching of both CHR-ROM and PRG-ROM banks
+      * Also allowed changes to name table mirroring and had support for saving to a RAM chip.
+      * Maximum number of 16 KB PRG-ROM banks using MMC1 is 8
+    * MMC3 allowed switching of both CHR-ROM and PRG-ROM banks
+      * Also allowed for selective screen scrolling (allowing part of the screen to move while part remains stationary)
+      * Was also capable of generating IRQs
+      * Maximum number of 16 KB PRG-ROM banks using MMC3 is 32
+  * Cartridge File Formats
+    * iNES file format is the most commonly used file format for ROM images for emulation
+      * Should have file extension *.nes
+      * Format provides 16 byte header at the start of the file
+        * Bytes 0-2 - contains the string "NES" to identify iNES file
+	* Byte 3 - should contain the value $1A to identify file format
+	* Byte 4 - number of 16 KB PRG-ROM banks (area used to store program code)
+	* Byte 5 - number of 8 KB CHR-ROM banks (area used to store graphics information and pattern tables)
+	* Byte 6 - ROM Control Byte 1
+	  * Bit 0 - type of mirroring used by game - 0 for horizontal mirroring, 1 for vertical mirroring
+	  * Bit 1 - indicates presence of battery-backed RAM at locations $6000-$7FFF
+	  * Bit 2 - indicates presence of 512-byte trainer at locations $7000-$71FF
+	  * Bit 3 - set to indicate override of bit 0, which would indicate four-screen mirroring to be used
+	  * Bits 4-7 - four lower bits of mapper number
+	* Byte 7 - ROM Control Byte 2
+	  * Bits 0-3 - reserved for future usage (should all be 0)
+	  * Bits 4-7 - four upper bits of mapper number
+	* Byte 8 - number of 8 KB RAM banks (assume 1 page of RAM when this byte is 0)
+	* Bytes 9-15 - reserved for future usage (should all be 0)
+      * Following the header is the 512-byte trainer if one is present
+      * The ROM banks will then follow, starting with PRG-ROM and then CHR-ROM.
+      * This format allows for up to 256 different memory mappers
+      * Each mapper is assigned a specific number
+        * Obtained by shifting bits 4-7 of control byte 2 to the left by four bits, then adding bits 4-7 of control byte 1
+    * UNIF file format (Universal NES Interchange Format)
+      * Should have file extension *.unf
+      * Header contains format and revision number, followed by a series of chunks
+        * Each chunk consists of an ID string to identify purpose of the chunk, the length in bytes, and the data
+	* Format similar to XML
+      * Identifies each mapper from the name of the board used rather than via a number
+        * Ensures only genuine boards can be used
+      * Although UNIF improves on iNES format, it is currently supported by fewer emulators and less ROM files available for the format
+        * iNES should be replaced by UNIF eventually
+  * Input Devices
+    * Control Pad
+      * The same instructions and bus are used to communicate with I/O devices as with memory
+      * Writing to a specific memory location writes to the appropriate device
+      * The I/O ports for input devices were $4016 and $4017
+      * The system reads multiple times from I/O port to get all information about the controller
+      * Each of the first eight reads indicates the status of a button on the standard controller
+        * The order of reads goes A, B, Select, Start, Up, Down, Left, Right
+      * First controller attached to port $4016, and the second to $4017
+      * Reads 17-20 retrieve signatures to identify if a device is connected, and the type of device if so.
+        * If a joypad is connected to $4016 the returned value is 01b, if connected to $4017 the return value is 10b
+      * There are four more reads that are not used before the cycle starts again
+      * Process of reading from an I/O device can be reset by strobing method
+        * When a reset is required, it is indicated by writing a 1 to a port followed by a 0
