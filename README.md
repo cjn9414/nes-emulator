@@ -5,6 +5,10 @@ My attempt at making an emulator for the Nintendo Entertainment System.
 I really want to learn much more about low-level programming, specifically programming in C. Upon searching for project ideas, I came across a [gameboy emulator](https://cturt.github.io/cinoop.html) that really caught my eye. As a huge fan of the Nintendo Entertainment System, I thought I would try my hand at making an emulator for it.
 
 # NES Overview
+
+## Reference
+All of the information that follows was found [here](http://www.nesdev.com/NESDoc.pdf). I have simply taken notes on what was found from this manual, highlighting the aspects that I found most important.
+
 ## Hardware
 * 8-bit 2A03 processor for the CPU, developed by NMOS technology
   * Very similar to 8-bit 6502, but is equipped to handle sound, but lacking BCD ability.
@@ -86,8 +90,116 @@ I really want to learn much more about low-level programming, specifically progr
       * Data can then be read from or written to $2007
       * After each write to $2007, the address is either incremented by 1 or 32 (dependent on bit 2 of $2000)
   * PPU also has a separate 256 byte area of memory to store sprite attributes (SPR-RAM). Sprites can be found in pattern tables
-  
-
+  * Registers used by PPU are located in main memory at $2000-$2007 with an additional register at $4014, used for Direct Memory Access
+  * PPU actions can be controlled by CPU by writing to $2000 and $2001, known as PPU Control Register 1 and 2 respectively
+    * The control registers should only be written to by the CPU, never read
+    * Bit 7 of $2000 can be used to disable NMIs
+    * Setting bit 5 of $2000 will switch to 8x16 sprites, otherwise the system will be supporting 8x8 sprites
+    * The next address in PPU memory to read from or write to will be incremented after each I/O.
+    * Bit 2 of $2000 controls the incremental value of the address that is read from or written to
+      * If clear, then the address is incremented by 1 (horizontal)
+      * If set, then the address is incremented by 32 (vertical)
+      * Clearing bit 3 or bit 4 of $2001 will hide the background or the sprites, respectively.
+  * The PPU Status Register is located at $2002 (read only)
+    * Used to report status to the CPU
+    * CPU frequently reads from this address to obtain PPU status
+    * Bit 7 is set by the PPU to indicate that a V-Blank is occurring
+    * Bit 4 is set to indicate PPU's willingness to access writes to VRAM
+    * When a read from $2002 occurs, bit 7 is reset to 0 as well as $2005 and $2006
+  * Direct Memory Access (DMA) is a technique for more efficient copying of data from CPU memory to sprite memory
+    * The whole of sprite memory can be filled by using a single write to $4014
+    * Starting address in CPU memory is specified by the operand for the write multiplied by $100. The 256 bytes starting at this address are copied directly into sprite memory without additional intervention of the CPU
+    * DMA uses memory bus, preventing CPU from using it during this time. This prevents CPU from accessing any more instructions (cycle stealing)
+      * DMA takes the equivalent of about 512 cycles, or about 4.5 scanlines worth
+  * PPU color palette
+    * Contains 52 colors although there is actually room for 64.
+    * Not every color can be displayed at a given time
+    * Two palettes with 16 entries are used (an image palette and a sprite palette)
+      * Image palette shows colors available for background tiles at $3F00-$3F0F
+      * Sprite palette shows colors available for sprites at $3F10-$3F1F
+      * Palettes don't store the color, but store the index of the color in the system palette
+      * Both palettes are mirrored to $3F20-$3FFF
+    * Bits 6 and 7 are ignored since only 64 unique values are needed
+    * Palette entry at $3F00 is the background color and is used for transparency
+      * Every four bytes is a mirror of $3F00 from $3F04-$3F1C
+        * This means there are actually only 13 total possible colors in each palette rather than 16
+	* The total number of possible onscreen colors is then 25 out of a total of 52
+  * Two pattern tables located at $0000 and $1000 in PPU memory
+    * Stores 8x8 pixel tiles which can be drawn on screen
+    * Some games store pattern tables on CHR-ROM on the cartridge
+      * Games lacking pattern tables on the CHR-ROM use RAM for this, filling the pattern tables during execution
+    * The pattern tables collectively store the least significant two bits of the 4-bit number that identifies the image/sprite palette used by that pixel
+      * With respect to the values at a location in the first and second sprite table:
+        * 00b is palette entry 0
+	* 01b is palette entry 1
+	* 10b is palette entry 2
+	* 11b is palette entry 3
+    * The other two bits of the color are taken from the attribute tables
+  * PPU name tables
+    * Name tables are a matrix of tile numbers pointing to the tiles stored in the pattern tables.
+    * Name tables are 32x30 tiles (each tile is 8x8 pixels, meaning the name table is 256x240 pixels)
+    * Name table has an associated attribute table
+  * PPU attribute tables
+    * Attribute tables hold the upper two bits of the colors for the tiles
+    * Each byte in the attribute table represents a 4x4 group of tiles
+      * Attribute table resolves to an 8x8 table of these groups of tiles
+    * Each 4x4 group is further divided into four 2x2 squares.
+  * NES has 2 KB to store name tables and attribute tables (two of each)
+    * NES can address up to four of each using mirroring
+    * There are four types of name table mirroring:
+      * Addressable name tables abbreviated as L1 at $2000, L2 at $2400, L3 at $2800, and L4 at $2C00
+      * Horizontal mirroring - maps L1 and L2 to first physical name table and L3 and L4 to the second name table
+      * Vertical mirroring - maps L1 and L3 to the first physical name table and L2 and L4 to the second name table
+      * Single-screen mirroring - points all four logical name tables to the same physical name table
+      * Four-screen mirroring - uses additional 2 KB of ram in game cartridge to allow each logical name table to occupy independent physical name table
+  * Sprites
+    * Can either be 8x8 pixels or 8x16 pixels
+    * The sprite data is stored in the pattern tables, and sprite attributes are stored in SPR-RAM
+    * Maximum of 64 sprites, each using four bytes in SPR-RAM
+      * Byte 0 - Stores y-coordinate of the top-left of the sprite minus one
+      * Byte 1 - Index number of the sprite in the pattern tables
+      * Byte 2 - Stores that attributes of the sprite
+        * Bits 0-1 - Most significant two bits of the color
+	* Bit 5 - Indicates if the sprite has priority over the background
+	* Bit 6 - Indicates whether to flip the sprite horizontally
+	* Bit 7 - Indicates whether to flip the sprite vertically
+    * 8x16 sprites use different pattern tables based on their index number
+      * An even index number indicates the sprite data is located in the first pattern table at $0000
+      * An odd index number indicates the sprite data is located in the second pattern table at $1000
+    * Sprites can be read or written one at a time by first writing the address to $2003 and then reading or writing $2004
+      * As an alternative, the entirety of SPR-RAM can be written in one DMA operation by writing to $4014'
+    * Sprites given priority by their position in SPR-RAM
+      * The first sprite, sprite 0 has a higher priority
+      * On each line, the system draws sprites from lower to higher priority
+      * Eight sprites are allowed per scanline
+        * System indicates maximum sprites on scanline by setting bit 5 of I/O register $2002
+    * Scrolling technique involves determining whether sprite 0 is overlapping a non-transparent background pixel
+      * If sprite 0 is being drawn and a non-transparent pixel overlaps a non-transparent background pixel, the system sets the sprite 0 hit flag in bit 6 of $2002
+      * If background tile contains only transparent pixels bit 6 should never be set
+    * Since characters are generally larger than a single sprite, characters constructed using multiple sprites
+  * Scrolling
+    * Background can be scrolled horizontally or vertically
+    * Scrolling makes use of the separate name tables
+    * Background taken from either one or two name tables at any given time
+    * The system maintains a 16-bit VRAM address register, which is set by $2006
+      * Bits 0-11 store the address of the name table as an offset from $2000
+        * Bits 0-4 are the x-scroll and is incremented as the lines are drawn. This will wrap from 31 to 0, switching bit 10
+	* Bits 5-9 are the y-scroll and are incremented at the end of the line. This will wrap from 29 to 0, switching bit 11
+	  * A write to $2007 to set the value above 29 will wrap to 0 when reaching 31, but bit 11 will not be affected
+	* Bits 12-14 are the tile y-offset
+    * Tile numbers indicated by x-scroll and y-scroll, allowing 32 tiles (256 pixels) by 30 tiles (240 pixels), totaling 960 tiles
+    * There is a second temporary VRAM address register that is also 16-bits long. There is also a 3-bit tile x-offset
+      * Both are updated by writes to registers and as the frame is drawn
+  * Television standards
+    * Different versions of the system were created for two different television formats (NTSC and PAL)
+    * Images on screen displayed by stream of electrons which light the screen left to right
+    * A single line of pixels referred to as a scanline
+    * H-Blank - time taken for electron to move to a new line and to the left at the end of a scanline
+    * V-Blank - time taken for electron to move back to top left of the screen after drawing the entire screen
+      * PPU indicates V-Blank period by setting bit 7 of I/O register $2002. This bit is then reset when the CPU next reads from $2002
+    * NTSC version contains 240 scanlines
+      * Top and bottom eight lines are cut off
+      * Takes additional 3 scanlines worth of CPU cycles to enter V-Blank
+      * V-Blank period takes additional 20 scanlines worth of CPU cycles before the next frame is ready to be drawn
 * NES uses memory mapped I/O for the CPU to communicate to other components
-
 
