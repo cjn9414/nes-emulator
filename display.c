@@ -7,9 +7,9 @@
 typedef struct {
   SDL_Renderer *renderer;
   SDL_Window *window;
-} App;
+} EmuDisplay;
 
-App app;
+EmuDisplay display;
 
 void init() {
   int rendererFlags, windowFlags;
@@ -20,14 +20,14 @@ void init() {
     exit(1);
   }
 
-  app.window = SDL_CreateWindow("Window ayyy", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, windowFlags);
-  if (!app.window) {
+  display.window = SDL_CreateWindow("Window whats good", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, windowFlags);
+  if (!display.window) {
     printf("Failed to open %d x %d window: %s\n", SCREEN_WIDTH, SCREEN_HEIGHT, SDL_GetError());
     exit(1);
   }
   SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-  app.renderer = SDL_CreateRenderer(app.window, -1, rendererFlags);
-  if (!app.renderer) {
+  display.renderer = SDL_CreateRenderer(display.window, -1, rendererFlags);
+  if (!display.renderer) {
 		printf("Failed to create renderer: %s\n", SDL_GetError());
     exit(1);
   }
@@ -49,18 +49,18 @@ void handleEvent() {
 
 void prepareScene(void)
 {
-	SDL_SetRenderDrawColor(app.renderer, 96, 128, 255, 255);
-	SDL_RenderClear(app.renderer);
+	SDL_SetRenderDrawColor(display.renderer, 96, 128, 255, 255);
+	SDL_RenderClear(display.renderer);
 }
 
 void presentScene(void)
 {
-	SDL_RenderPresent(app.renderer);
+	SDL_RenderPresent(display.renderer);
 }
 
 void cleanup(void) {
-  SDL_DestroyRenderer(app.renderer); 
-  SDL_DestroyWindow(app.window); 
+  SDL_DestroyRenderer(display.renderer); 
+  SDL_DestroyWindow(display.window); 
   SDL_Quit();
 }
 
@@ -84,7 +84,7 @@ void doInput(void) {
 
 int main()
 {
-	memset(&app, 0, sizeof(App));
+	memset(&display, 0, sizeof(EmuDisplay));
 	init();
 	atexit(cleanup);
 	while (1)
