@@ -184,8 +184,8 @@ All of the information that follows was found [here](http://www.nesdev.com/NESDo
   * Background taken from either one or two name tables at any given time
   * The system maintains a 16-bit VRAM address register, which is set by $2006
     * Bits 0-11 store the address of the name table as an offset from $2000
-      * Bits 0-4 are the x-scroll and is incremented as the lines are drawn. This will wrap from 31 to 0, switching bit 10
-      * Bits 5-9 are the y-scroll and are incremented at the end of the line. This will wrap from 29 to 0, switching bit 11
+      * Bits 0-4 are the x-scroll, incremented as the lines are drawn. This will wrap from 31 to 0, switching bit 10
+      * Bits 5-9 are the y-scroll, incremented at the end of the line. This will wrap from 29 to 0, switching bit 11
       * A write to $2007 to set the value above 29 will wrap to 0 when reaching 31, but bit 11 will not be affected
       * Bits 12-14 are the tile y-offset
   * Tile numbers indicated by x-scroll and y-scroll, allowing 32 tiles (256 pixels) by 30 tiles (240 pixels), totaling 960 tiles
@@ -232,10 +232,10 @@ All of the information that follows was found [here](http://www.nesdev.com/NESDo
       * Byte 5 - number of 8 KB CHR-ROM banks (area used to store graphics information and pattern tables)
       * Byte 6 - ROM Control Byte 1
        	* Bit 0 - type of mirroring used by game - 0 for horizontal mirroring, 1 for vertical mirroring
-	* Bit 1 - indicates presence of battery-backed RAM at locations $6000-$7FFF
-	* Bit 2 - indicates presence of 512-byte trainer at locations $7000-$71FF
-	* Bit 3 - set to indicate override of bit 0, which would indicate four-screen mirroring to be used
-	* Bits 4-7 - four lower bits of mapper number
+	      * Bit 1 - indicates presence of battery-backed RAM at locations $6000-$7FFF
+	      * Bit 2 - indicates presence of 512-byte trainer at locations $7000-$71FF
+	      * Bit 3 - set to indicate override of bit 0, which would indicate four-screen mirroring to be used
+	      * Bits 4-7 - four lower bits of mapper number
       * Byte 7 - ROM Control Byte 2
         * Bits 0-3 - reserved for future usage (should all be 0)
 	* Bits 4-7 - four upper bits of mapper number
