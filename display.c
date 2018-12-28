@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "SDL2/SDL.h"
+#include "display.h"
 #define SCREEN_WIDTH  1280
 #define SCREEN_HEIGHT 720
 
@@ -11,7 +12,7 @@ typedef struct {
 
 EmuDisplay display;
 
-void init() {
+void init(void) {
   int rendererFlags, windowFlags;
   rendererFlags = SDL_RENDERER_ACCELERATED;
   windowFlags = 0;
@@ -33,7 +34,7 @@ void init() {
   }
 }
 
-void handleEvent() {
+void handleEvent(void) {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
     switch (event.type) {
@@ -82,7 +83,7 @@ void doInput(void) {
 }
 
 
-int main()
+void runDisplay(void)
 {
 	memset(&display, 0, sizeof(EmuDisplay));
 	init();
@@ -94,5 +95,4 @@ int main()
 		presentScene();	
 		SDL_Delay(16);
 	}
-	return 0;
 }

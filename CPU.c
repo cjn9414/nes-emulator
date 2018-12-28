@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "CPU.h"
 #define KB 1024
 #define ZERO_PAGE 0
 #define ZERO_PAGE_X 1
@@ -15,28 +16,6 @@
 #define IMMEDIATE 11
 #define RELATIVE 12
 #define INVALID -1
-// Not yet quite sure about how I want to set up my struct for the CPU.
-
-//6502
-
-//struct CPU {
-//  unsigned char zeroPage[100];
-//  unsigned char stack[100];
-//  unsigned char ram[600];
-//  unsigned char IO[20];
-//  unsigned char expRom[1980];
-//  unsigned char sram[2000];
-//  unsigned char lowPrgRom[4000];
-//  unsigned char upPrgRom[4000];
-//}
-//}
-
-struct opcode {
-  unsigned char code[3];
-  char mode[11];
-  u_int8_t hex;
-  u_int8_t operands;
-};
 
 // instruction name, address mode, address, length in bytes
 const struct opcode opcodes[256] = {
@@ -290,10 +269,14 @@ const struct opcode opcodes[256] = {
   {"NAN", INVALID, 0},
   {"SED", IMPLIED, 1},
   {"SBC", ABSOLUTE_Y, 3},
-  {"NAN", INVALID, 0},      // 0xFA
-  {"NAN", INVALID, 0},      // 0xFB
-  {"NAN", INVALID, 0},      // 0xFC
-  {"SBC", ABSOLUTE_X, 3},   // 0xFD
-  {"INC", ABSOLUTE_X, 3},   // 0xFE
+  {"NAN", INVALID, 0},      
+  {"NAN", INVALID, 0},      
+  {"NAN", INVALID, 0},      
+  {"SBC", ABSOLUTE_X, 3},  
+  {"INC", ABSOLUTE_X, 3},  
   {"NAN", INVALID, 0}      // 0xFF
 };
+
+//void brk(void) {  };
+
+

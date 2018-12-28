@@ -1,19 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "main.h"
+#include "display.h"
 #define KB 1024
 #define MAX_SIZE 64*KB
-
-
-struct Header {
-  u_int8_t trainerBit;
-  u_int8_t batteryRamBit;
-  u_int8_t fourScreenBit;
-  u_int8_t mapperNumber;
-  u_int8_t mirror; // 0: horizontal, 1: vertical
-  u_int8_t n_prg_banks; // 16 KB chunks
-  u_int8_t n_chr_banks; // 8 KB chunks
-  u_int8_t n_ram_banks; // 8 KB chunks
-};
 
 void loadHeader(FILE *file, struct Header* head) {
   unsigned char inspectByte;
@@ -70,6 +60,7 @@ int main(int argc, char **argv) {
   fread(graphicData, sizeof(unsigned char), 8*KB*head.n_chr_banks, file);
   fseek(file, 0, SEEK_END);
   fclose(file);
+  runDisplay();
   return 0;
 }
 
