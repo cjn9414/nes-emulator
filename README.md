@@ -14,7 +14,7 @@ I am in no way advocating the use of illegally obtained software with this emula
 
 ## Reference
 * All of the information in the hardware section that follows was found [here](http://www.nesdev.com/NESDoc.pdf). I have simply taken notes on what was found from this manual, highlighting the key points that I found most important.
-* The opcodes that were used to simulate the 6502 processor was foud [here](http://www.6502.org/tutorials/6502opcodes.html#ADC).
+* The opcodes that were used to simulate the 6502 processor was found [here](http://www.6502.org/tutorials/6502opcodes.html#ADC).
 
 
 ## Hardware
