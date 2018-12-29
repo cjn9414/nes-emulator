@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
+
 #include "CPU.h"
+#include "memory.h"
+#include "registers.h"
+
 #define KB 1024
 #define ZERO_PAGE 0
 #define ZERO_PAGE_X 1
@@ -17,6 +21,9 @@
 #define RELATIVE 12
 #define INVALID -1
 
+struct Registers regs;
+
+registerPowerUp(&regs);
 // instruction name, address mode, address, length in bytes
 const struct opcode opcodes[256] = {
   {"BRK", IMPLIED, 1},    // 0x00
@@ -277,6 +284,52 @@ const struct opcode opcodes[256] = {
   {"NAN", INVALID, 0}      // 0xFF
 };
 
-//void brk(void) {  };
+void status_carry(void)     { regs.p = regs.p | 0b00000001; }
+void status_zero(void)      { regs.p = regs.p | 0b00000010; }
+void status_interrupt(void) { regs.p = regs.p | 0b00000100; }
+//void status_decimal(void) { regs.p = regs.p | 0b00001000; }
+void status_break(void)     { regs.p = regs.p | 0b00010000; }
+
+void status_overflow(void)  { regs.p = regs.p | 0b01000000; }
+void status_negative(void)  { regs.p = regs.p | 0b10000000; }
+
+void brk(void) { status_break(); }  //0x00
+
+unsigned char ora_ind_x(unsigned char val) {     //0x01
+  unsigned char res = regs.a | (regs.x + val)%0b100000000;
+  val = readByte((readByte(res+1) << 8) + readByte(res)); // um
+  if (val == 0) status_zero();
+  else if (val < 0) status_negative();
+  return val;
+};
+
+unsigned char ora_ind_y(unsigned char val) {     //0x11
+  unsigned short res = (readByte(val+1) << 8) + readByte(val);
+  return readByte(res + regs.y) | regs.a;
+}
+
+unsigned char ora_imm(unsigned char val) {   //0x09
+  return regs.a | val;
+}
+
+unsigned char ora_zp(unsigned char val) {  //0x05
+  return readByte(val) | regs.a;
+}
+
+unsigned char ora_zp_x(unsigned char val) {  // 0x15
+  return readByte(val+regs.x) | regs.a;
+}
+
+unsigned char ora_abs(unsigned char lower, unsigned char upper) {  //0x0D
+  return readByte((readByte(upper) << 8) + readByte(lower)) | regs.a;
+}
+
+unsigned char ora_abs_x(unsigned char lower, unsigned char upper) {  //0x1D
+  return (regs.x + readByte(readByte(upper) << 8) + readByte(lower)) | regs.a;
+}
+
+unsigned char ora_abs_y(unsigned char lower, unsigned char upper) {  //0x19
+  return (regs.y + readByte(readByte(upper) << 8) + readByte(lower)) | regs.a;
+}
 
 

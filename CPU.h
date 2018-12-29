@@ -10,6 +10,4 @@ struct opcode {
   u_int8_t operands;
 };
 
-unsigned char cpu[0x10000];
-
 #endif
