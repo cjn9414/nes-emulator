@@ -1,6 +1,9 @@
 #ifndef MAIN_H
 #define MAIN_H
 
+#include <sys/types.h>
+#include <stdio.h>
+
 struct Header {
   u_int8_t trainerBit;
   u_int8_t batteryRamBit;
