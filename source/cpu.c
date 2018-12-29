@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "CPU.h"
+#include "cpu.h"
 #include "memory.h"
 #include "registers.h"
 
@@ -21,9 +21,8 @@
 #define RELATIVE 12
 #define INVALID -1
 
-struct Registers regs;
+extern struct registers regs;
 
-registerPowerUp(&regs);
 // instruction name, address mode, address, length in bytes
 const struct opcode opcodes[256] = {
   {"BRK", IMPLIED, 1},    // 0x00
@@ -283,6 +282,7 @@ const struct opcode opcodes[256] = {
   {"INC", ABSOLUTE_X, 3},  
   {"NAN", INVALID, 0}      // 0xFF
 };
+
 
 void status_carry(void)     { regs.p = regs.p | 0b00000001; }
 void status_zero(void)      { regs.p = regs.p | 0b00000010; }

@@ -15,7 +15,7 @@ struct Header {
   u_int8_t n_ram_banks; // 8 KB chunks
 };
 
-void loadHeader(FILE*, struct Header*);
+signed char loadHeader(FILE*, struct Header*);
 unsigned char * cpuStartup(void);
 unsigned char * ppuStartup(void);
 

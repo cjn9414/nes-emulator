@@ -2,12 +2,18 @@
 #include <stdlib.h>
 #include "main.h"
 #include "display.h"
+#include "registers.h"
 #define KB 1024
 #define MAX_SIZE 64*KB
 
-void loadHeader(FILE *file, struct Header* head) {
+struct registers regs;
+
+signed char loadHeader(FILE *file, struct Header* head) {
   unsigned char inspectByte;
-  fseek(file, 4, SEEK_SET);
+  unsigned char format[3];
+  fread(&format, sizeof(unsigned char), 3, file);
+  if (strcmp(format, "NES") != 0) return -1;
+  fseek(file, 1, SEEK_CUR);
   fread(&(head->n_prg_banks), sizeof(unsigned char), 1, file);
   fread(&(head->n_chr_banks), sizeof(unsigned char), 1, file);
   fread(&inspectByte, sizeof(unsigned char), 1, file);
@@ -20,16 +26,7 @@ void loadHeader(FILE *file, struct Header* head) {
   head->mapperNumber += ((inspectByte >> 4) << 4);
   fread(&(head->n_ram_banks), sizeof(unsigned char), 1, file);
   fseek(file, 7, SEEK_CUR);
-}
-
-unsigned char * cpuStartup(void) {
-  unsigned char cpu[KB*64];
-  return cpu;
-}
-
-unsigned char * ppuStartup(void) {
-  unsigned char ppu[KB*16];
-  return ppu;
+  return 0;
 }
 
 int main(int argc, char **argv) {
@@ -46,10 +43,12 @@ int main(int argc, char **argv) {
     printf("File unable to be opened. Is it in the working directory?\n");
     exit(1);
   }
-
-  loadHeader(file, &head);
-  //unsigned char *cpu = cpuStartup();
-  //unsigned char *ppu = ppuStartup();
+  
+  registerPowerup(&regs);
+  if (loadHeader(file, &head) < 0) {
+    printf("Wrong file type or corrupted file. Please use a .nes file.\n");
+    exit(1);
+  }
   unsigned char programData[16*KB*head.n_prg_banks];
   unsigned char graphicData[8*KB*head.n_chr_banks];
   unsigned char trainer[KB/2];

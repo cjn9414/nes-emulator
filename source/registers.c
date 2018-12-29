@@ -1,6 +1,6 @@
 #include "registers.h"
 
-void registerPowerUp(struct Registers * regs) {
+void registerPowerup(struct registers* regs) {
   regs->p = 0x34;
   regs->sp = 0xFD;
   regs->a = 0;

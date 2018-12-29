@@ -1,7 +1,7 @@
 #ifndef REGISTERS_H
 #define REGISTERS_H
 
-struct Registers {
+struct registers {
   unsigned short pc;
   unsigned char sp;
   unsigned char p;
@@ -10,6 +10,6 @@ struct Registers {
   unsigned char y;
 };
 
-void registerPowerUp(struct Registers*);
+void registerPowerup(struct registers*);
 
 #endif
