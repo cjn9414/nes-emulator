@@ -42,6 +42,10 @@ unsigned char readByte(unsigned short addr) {
   }
 }
 
+unsigned char readZeroPage(unsigned char addr) {
+  return ram[addr];
+}
+
 void writeByte (unsigned short addr, unsigned char val) {
   if (addr < 0x2000) {
     ram[addr % 0x0800] = val;
@@ -70,6 +74,10 @@ void writeByte (unsigned short addr, unsigned char val) {
   else {
     prg_rom_upper[addr - 0xC000] = val;
   }
+}
+
+void writeZeroPage(unsigned char addr, unsigned char val) {
+  ram[addr] = val;
 }
 
 unsigned char popStack(void) {
