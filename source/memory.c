@@ -1,3 +1,7 @@
+#include "memory.h"
+#include "registers.h"
+extern struct registers regs;
+
 unsigned char ram[0x0800];
 unsigned char ram_mirror[0x1800];
 unsigned char ppu_reg[0x0008];
@@ -67,3 +71,12 @@ void writeByte (unsigned short addr, unsigned char val) {
     prg_rom_upper[addr - 0xC000] = val;
   }
 }
+
+unsigned char popStack(void) {
+  return ram[--regs.sp];
+}
+
+void pushStack(unsigned char val) {
+  ram[regs.sp++] = val;
+}
+
