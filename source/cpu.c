@@ -346,6 +346,245 @@ void SZFlags(unsigned char val) {
 
 void brk(void) { setFlagBreak(1); }  //0x00
 
+//void bpl(unsigned char val) {
+//  
+//  if (getFlagCarry()) {
+//    
+//  }
+//}
+
+void cmp2(unsigned char val, unsigned char mode) {
+  switch(mode) {
+    case IMMEDIATE:
+      val = val;
+    case ZERO_PAGE:
+      val = readZeroPage(val);
+    case ZERO_PAGE_X:
+      val = readZeroPage(val + regs.x);
+    case INDIRECT_X:
+      val = readZeroPage((readByte(val+1) << 8) + readByte(val) + regs.x);
+    case INDIRECT_Y:
+      val = readZeroPage((readByte(val+1) << 8) + readByte(val) + regs.y);
+    default:
+      printf("Unexpected mode at cpy2.\n");
+      exit(1);
+  }
+  if (regs.a > val) {
+    setFlagCarry(1);
+  } else if (regs.a == val) {
+    setFlagZero(1);
+  } else setFlagNegative(1);
+}
+
+void cmp3(unsigned char lower, unsigned char upper, unsigned char mode) {
+  unsigned short addr;
+  switch(mode) {
+    case ABSOLUTE:
+      addr = (upper << 8) + lower;
+      lower = readByte(addr);
+    case ABSOLUTE_X:
+      addr = (upper << 8) + lower + regs.x;
+      lower = readByte(addr);
+    case ABSOLUTE_Y:
+      addr = (upper << 8) + lower + regs.y;
+      lower = readByte(addr);
+    default:
+      printf("Unexpected mode at cpy3.\n");
+      exit(1);
+  }
+  if (regs.a > lower) {
+    setFlagCarry(1);
+  } else if (regs.a == lower) {
+    setFlagZero(1);
+  } else setFlagNegative(1);
+}
+
+void cpx2(unsigned char val, unsigned char mode) {
+  switch(mode) {
+    case IMMEDIATE:
+      val = val;
+    case ZERO_PAGE:
+      val = readZeroPage(val);
+    default:
+      printf("Unexpected mode at cpy2.\n");
+      exit(1);
+  }
+  if (regs.x > val) {
+    setFlagCarry(1);
+  } else if (regs.x == val) {
+    setFlagZero(1);
+  } else setFlagNegative(1);
+}
+
+void cpx3(unsigned char lower, unsigned char upper, unsigned char mode) {
+  unsigned short addr;
+  switch(mode) {
+    case ABSOLUTE:
+      addr = (upper << 8) + lower;
+      lower = readByte(addr);
+    default:
+      printf("Unexpected mode at cpy3.\n");
+      exit(1);
+  }
+  if (regs.x > lower) {
+    setFlagCarry(1);
+  } else if (regs.x == lower) {
+    setFlagZero(1);
+  } else setFlagNegative(1);
+}
+
+void cpy2(unsigned char val, unsigned char mode) {
+  switch(mode) {
+    case IMMEDIATE:
+      val = val;
+    case ZERO_PAGE:
+      val = readZeroPage(val);
+    default:
+      printf("Unexpected mode at cpy2.\n");
+      exit(1);
+  }
+  if (regs.y > val) {
+    setFlagCarry(1);
+  } else if (regs.y == val) {
+    setFlagZero(1);
+  } else setFlagNegative(1);
+}
+
+void cpy3(unsigned char lower, unsigned char upper, unsigned char mode) {
+  unsigned short addr;
+  switch(mode) {
+    case ABSOLUTE:
+      addr = (upper << 8) + lower;
+      lower = readByte(addr);
+    default:
+      printf("Unexpected mode at cpy3.\n");
+      exit(1);
+  }
+  if (regs.y > lower) {
+    setFlagCarry(1);
+  } else if (regs.y == lower) {
+    setFlagZero(1);
+  } else setFlagNegative(1);
+}
+
+void dec_zp(unsigned char addr) {
+  regs.pc -= readZeroPage(addr);
+  SZFlags(regs.pc);
+}
+
+void dec_zp_x(unsigned char addr) {
+  regs.pc -= readZeroPage(regs.x + addr);
+  SZFlags(regs.pc);
+}
+
+void dec_abs(unsigned char lower, unsigned char upper) {
+  unsigned short addr = (upper << 8) + lower;
+  regs.pc -= readByte(addr);
+  SZFlags(regs.pc);
+}
+
+void dec_abs_x(unsigned char lower, unsigned char upper) {
+  unsigned short addr = (upper << 8) + lower + regs.x;
+  regs.pc -= readByte(addr);
+  SZFlags(regs.pc);
+}
+
+void eor2(unsigned char val, unsigned char mode) {
+  unsigned short addr;
+  switch (mode) {
+    case IMMEDIATE:
+      regs.a = regs.a ^ val;
+    case ZERO_PAGE:
+      regs.a = regs.a ^ readZeroPage(val);
+    case ZERO_PAGE_X:
+      regs.a = regs.a ^ readZeroPage(val + regs.x);
+    case INDIRECT_X:
+      addr = (readZeroPage(val + regs.x + 1) << 8) + readZeroPage(val + regs.x);
+      regs.a = regs.a + readByte(addr);
+    case INDIRECT_Y:
+      addr = (readZeroPage(val + regs.y + 1) << 8) + readZeroPage(val + regs.x);
+      regs.a = regs.a + readByte(addr);
+    default:
+      printf("Unexpected mode at eor2\n");
+      exit(1);
+  }
+  SZFlags(regs.a);
+}
+
+void eor3(unsigned char lower, unsigned char upper, unsigned char mode) {
+  unsigned short addr;
+  switch (mode) {
+    case ABSOLUTE:
+      addr = (upper << 8) + lower;
+      regs.a = regs.a ^ readByte(addr);
+    case ABSOLUTE_X:
+      addr = (upper << 8) + lower + regs.x;
+      regs.a = regs.a ^ readByte(addr);
+    case ABSOLUTE_Y:
+      addr = (upper << 8) + lower + regs.y;
+      regs.a = regs.a ^ readByte(addr);
+    default:
+      printf("Unexpected mode at eor3\n");
+      exit(1);
+  }
+  SZFlags(regs.a);
+}
+
+void clc(void) { setFlagCarry(0); }
+
+void sec(void) { setFlagCarry(1); }
+
+void cli(void) { setFlagInterrupt(0); }
+
+void sei(void) { setFlagInterrupt(1); }
+
+void clv(void) { setFlagOverflow(0); }
+
+void cld(void) { return; }
+
+void sed(void) { return; }
+
+void inc_zp(unsigned char addr) {
+  regs.pc += readZeroPage(addr);
+  SZFlags(regs.pc);
+}
+
+void inc_zp_x(unsigned char addr) {
+  regs.pc += readZeroPage(regs.x + addr);
+  SZFlags(regs.pc);
+}
+
+void inc_abs(unsigned char lower, unsigned char upper) {
+  unsigned short addr = (upper << 8) + lower;
+  regs.pc += readByte(addr);
+  SZFlags(regs.pc);
+}
+
+void inc_abs_x(unsigned char lower, unsigned char upper) {
+  unsigned short addr = (upper << 8) + lower + regs.x;
+  regs.pc += readByte(addr);
+  SZFlags(regs.pc);
+}
+
+void jmp(unsigned char lower, unsigned char upper, unsigned char mode) {
+  unsigned short addr = (upper << 8) + lower;
+  lower = readByte(addr);
+  if (mode == ABSOLUTE) {
+    regs.pc = lower;
+  } else if (mode == INDIRECT) {
+    addr = (readByte(lower+1) << 8) + readByte(lower);
+    regs.pc = readByte(lower);
+  } else {
+    printf("Unexpected mode at jmp.\n");
+    exit(1);  
+  }
+}
+
+void jsr(unsigned char lower, unsigned char upper) {
+  unsigned short toStack = (upper << 8) + lower - 1;
+  pushStack(toStack);
+}
+
 void ldx2(unsigned char addr, unsigned char mode) {
   switch(mode) {
     case IMMEDIATE:
