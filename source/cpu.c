@@ -344,14 +344,219 @@ void SZFlags(unsigned char val) {
   }
 }
 
+void branchJump(unsigned char val) {
+  if (getBit(7, val) == 0) {
+    regs.pc += val;
+  } else {
+    val = ~val + 1;
+    regs.pc -= val;
+  }
+}
+
 void brk(void) { setFlagBreak(1); }  //0x00
 
-//void bpl(unsigned char val) {
-//  
-//  if (getFlagCarry()) {
-//    
-//  }
-//}
+
+void adc2(unsigned char val, unsigned char mode) {
+  unsigned char res;
+  unsigned short addr;
+  switch (mode) {
+    case IMMEDIATE:
+      val = val + getFlagCarry();
+    case ZERO_PAGE:
+      val = readByte(val) + getFlagCarry();
+    case ZERO_PAGE_X:
+      val = readByte((regs.x + val) % 0x100) + getFlagCarry();  
+    case INDIRECT_X:
+      addr = readByte(val + regs.x) + (readByte(val + regs.x + 1) << 8);
+      val = readByte(addr) + getFlagCarry();
+    case INDIRECT_Y:
+      addr = readByte(val + regs.y) + (readByte(val + regs.y + 1) << 8);
+      val = readByte(addr) + getFlagCarry();
+    default:
+      printf("Unexpected mode at sbc2\n");
+      exit(1);
+  }
+  res = val + regs.a;
+  VFlag(val, regs.a, res);
+  res > regs.a ? setFlagCarry(1) : setFlagCarry(0);
+  regs.a = res;
+  SZFlag(regs.a);
+}
+
+void adc3(unsigned char lower, unsigned char upper, unsigned char mode) {
+  unsigned char res;
+  unsigned short addr;
+  switch (mode) {
+    case ABSOLUTE:
+      addr = (upper << 8) + lower;
+      lower = readByte(addr) + getFlagCarry();
+    case ABSOLUTE_X:
+      addr = (upper << 8) + lower + regs.x;
+      lower = readByte(addr) + getFlagCarry();
+    case ABSOLUTE_Y:
+      addr = (upper << 8) + lower + regs.y;
+      lower = readByte(addr) + getFlagCarry();
+    default:
+      printf("Unexpected mode at sbc3\n");
+      exit(1);
+  }
+  res = lower + regs.a;
+  VFlag(lower, regs.a, res);
+  res > regs.a ? setFlagCarry(1) : setFlagCarry(0);
+  regs.a = res;
+  SZFlag(regs.a);
+}
+
+unsigned char and_ind_x(unsigned char val) {     //0x01
+  unsigned char res = regs.a & (regs.x + val)%0x100;
+  val = readByte((readByte(res+1) << 8) + readByte(res)); // um
+  SZFlags(val);
+  return val;
+};
+
+unsigned char and_ind_y(unsigned char val) {     //0x11
+  unsigned short res = (readByte(val+1) << 8) + readByte(val);
+  val = readByte(res + regs.y) & regs.a;
+  SZFlags(val);
+  return val;
+}
+
+unsigned char and_imm(unsigned char val) {   //0x09
+  val = regs.a & val;
+  SZFlags(val);
+  return val;
+}
+
+unsigned char and_zp(unsigned char val) {  //0x05
+  val = readByte(val) & regs.a;
+  SZFlags(val);
+  return val;
+}
+
+unsigned char and_zp_x(unsigned char val) {  // 0x15
+  val = readByte(val+regs.x) & regs.a;
+  SZFlags(val);
+  return val;
+}
+
+unsigned char and_abs(unsigned char lower, unsigned char upper) {  
+  unsigned char val = readByte((readByte(upper) << 8) + readByte(lower)) & regs.a;
+  SZFlags(val);
+  return val;
+}
+
+unsigned char and_abs_x(unsigned char lower, unsigned char upper) {
+  unsigned char val = (regs.x + readByte(readByte(upper) << 8) + readByte(lower)) & regs.a;
+  SZFlags(val);
+  return val;
+}
+
+unsigned char and_abs_y(unsigned char lower, unsigned char upper) {
+  unsigned char val = (regs.y + readByte(readByte(upper) << 8) + readByte(lower)) & regs.a;
+  SZFlags(val);
+  return val;
+}
+
+void asl_acc(void) { 
+  setFlagCarry(getBit(regs.a, 7));
+  regs.a = 0x00 | (regs.a << 1);
+  SZFlags(regs.a);
+}
+
+void asl_zp(unsigned char addr) {
+  unsigned char val = readByte( (unsigned short) addr);
+  setFlagCarry(getBit(val, 7));
+  val = val << 1;
+  writeByte( (unsigned short) addr, val); 
+  SZFlags(val);
+}
+
+void asl_zp_x(unsigned char addr) {
+  unsigned char val = readByte( (unsigned short) (addr+regs.x) % 0x100);
+  setFlagCarry(getBit(val, 7));
+  val = val << 1;
+  writeByte( (unsigned short) addr, val);
+  SZFlags(val);
+}
+
+void asl_abs(unsigned char lower, unsigned char upper) {
+  unsigned short addr = (lower << 8) + upper;
+  lower = readByte(addr);
+  setFlagCarry(getBit(lower, 7));
+  lower = lower << 1;
+  writeByte(addr, lower);
+}
+
+void asl_abs_x(unsigned char lower, unsigned char upper) {
+  unsigned short addr = (lower << 8) + upper + regs.x;
+  lower = readByte(addr);
+  setFlagCarry(getBit(lower, 7));
+  lower = lower << 1;
+  writeByte(addr, lower);
+}
+
+void bit_zp(unsigned char val) {
+  val = readZeroPage(val);
+  setFlagNegative(getBit(val, 7));
+  setFlagOverflow(getBit(val, 6));
+  setFlagZero(val & regs.a);
+}
+
+void bit_abs(unsigned char lower, unsigned char upper) {
+  unsigned short addr = (upper << 8) + lower;
+  lower = readByte(addr);
+  setFlagNegative(getBit(lower, 7));
+  setFlagOverflow(getBit(lower, 6));
+  setFlagZero(lower & regs.a);
+}
+
+void bpl(unsigned char val) {  
+  if (!getFlagNegative()) {
+    branchJump(val);
+  }
+}
+
+void bmi(unsigned char val) {  
+  if (getFlagNegative()) {
+    branchJump(val);
+  }
+}
+
+void bvc(unsigned char val) {  
+  if (!getFlagOverflow()) {
+    branchJump(val);
+  }
+}
+
+void bvs(unsigned char val) {  
+  if (getFlagOverflow()) {
+    branchJump(val);
+  }
+}
+
+void bcc(unsigned char val) {  
+  if (!getFlagCarry()) {
+    branchJump(val);
+  }
+}
+
+void bcs(unsigned char val) {  
+  if (getFlagCarry()) {
+    branchJump(val);
+  }
+}
+
+void bne(unsigned char val) {  
+  if (!getFlagZero()) {
+    branchJump(val);
+  }
+}
+
+void beq(unsigned char val) {  
+  if (getFlagZero()) {
+    branchJump(val);
+  }
+}
 
 void cmp2(unsigned char val, unsigned char mode) {
   switch(mode) {
