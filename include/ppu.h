@@ -19,6 +19,11 @@ struct PPU {
   //unsigned char dataMirror[0xB000];
 };
 
+struct color {
+  unsigned char entry;
+  unsigned char value[3];
+};
+
 unsigned char readPictureByte(unsigned short);
 
 #endif
