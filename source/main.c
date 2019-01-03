@@ -3,10 +3,13 @@
 #include "main.h"
 #include "display.h"
 #include "registers.h"
+#include "mmc1.h"
 #define KB 1024
 #define MAX_SIZE 64*KB
 
 struct registers regs;
+struct Header head;
+struct MMC1 mmc1;
 
 signed char loadHeader(FILE *file, struct Header* head) {
   unsigned char inspectByte;
@@ -36,7 +39,6 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  struct Header head;
   char *fileName = argv[1]; 
   FILE *file = fopen(fileName, "rb");
   if (!file) {
@@ -57,9 +59,11 @@ int main(int argc, char **argv) {
   }
   fread(programData, sizeof(unsigned char), 16*KB*head.n_prg_banks, file);
   fread(graphicData, sizeof(unsigned char), 8*KB*head.n_chr_banks, file);
-  fseek(file, 0, SEEK_END);
   fclose(file);
-  runDisplay();
+
+  mmc1Powerup();
+  loadMMC1Ptrs(programData, graphicData);
+  //runDisplay();
   return 0;
 }
 

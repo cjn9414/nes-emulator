@@ -1,5 +1,6 @@
 #include "memory.h"
 #include "registers.h"
+#include "mmc1.h"
 extern struct registers regs;
 
 unsigned char ram[0x0800];
@@ -14,11 +15,11 @@ unsigned char prg_rom_upper[0x4000];
 
 unsigned char readByte(unsigned short addr) {
   if (addr < 0x2000) {
-    return ram[addr % 0x0800];
+    return ram[addr];
   }
 
   else if (addr < 0x4000) {
-    return ppu_reg[(addr - 0x2000) % 0x0008];
+    return ppu_reg[(addr - 0x2000)];
   }
 
   else if (addr < 0x4020) {
@@ -48,11 +49,18 @@ unsigned char readZeroPage(unsigned char addr) {
 
 void writeByte (unsigned short addr, unsigned char val) {
   if (addr < 0x2000) {
-    ram[addr % 0x0800] = val;
+    addr = addr % 0x0800;
+    ram[addr] = val;
+    ram[addr + 0x0800] = val;
+    ram[addr + 0x1000] = val;
   }
 
   else if (addr < 0x4000) {
-    ppu_reg[(addr - 0x2000) % 0x0008] = val;
+    addr = 0x2000 + (addr % 0x0008);
+    while (addr < 0x4000) {
+      ppu_reg[addr] = val;
+      addr += 0x0008;
+    }
   }
 
   else if (addr < 0x4020) {
@@ -69,10 +77,12 @@ void writeByte (unsigned short addr, unsigned char val) {
 
   else if (addr < 0xC000) {
     prg_rom_lower[addr - 0x8000] = val;
+    mmc1Write(addr, val);
   }
 
   else {
     prg_rom_upper[addr - 0xC000] = val;
+    mmc1Write(addr, val);
   }
 }
 
