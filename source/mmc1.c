@@ -1,7 +1,7 @@
 #include "mmc1.h"
 #include "cpu.h"
 #include "main.h"
-
+#include "ppu.h"
 #define KB 1024
 
 extern struct MMC1 mmc1;
@@ -11,6 +11,8 @@ extern unsigned char prg_rom_upper[0x4000];
 
 unsigned char * programData;
 unsigned char * graphicData;
+
+extern struct PPU ppu;
 
 void loadMMC1Ptrs(unsigned char * p, unsigned char * g) {
   programData = p;
@@ -29,10 +31,10 @@ void mmc1Write(unsigned short addr, unsigned char val) {
       mmc1.mainControl = mmc1.shift;
     } else if (addr >= 0xA000 && addr < 0xC000) {
       mmc1.chrBank0 = mmc1.shift;
-      //loadChrBank0();
+      loadChrBanks();
     } else if (addr >= 0xC000 && addr < 0xE000) {
       mmc1.chrBank1 = mmc1.shift;
-      //loadChrBank1();
+      loadChrBanks();
     } else if (addr >= 0xE000) {
       mmc1.prgBank = mmc1.shift;
       loadProgramBank();
@@ -51,13 +53,20 @@ void mmc1Powerup(void) {
   mmc1Reset();
 }
 
-//void loadChrBank0(void) {
-//    
-//}
-
-//void loadChrBank1(void) {
-//
-//}
+void loadChrBanks(void) {
+  unsigned char bankNumber = mmc1.chrBank0 & 0b00011111;
+  unsigned int addrStart = 8*KB*bankNumber;
+  if (getBit(mmc1.mainControl, 4)) {  // two 4KB banks
+    memcpy(graphicData + addrStart, ppu.patternTable0, 4*KB);
+    bankNumber = mmc1.chrBank1 & 0b00011111;
+    addrStart = 8*KB*bankNumber;
+    memcpy(graphicData + addrStart, ppu.patternTable1, 4*KB);
+  } else { // one 8KB bank
+    memcpy(graphicData + addrStart, ppu.patternTable0, 4*KB);
+    addrStart += 4*KB;
+    memcpy(graphicData + addrStart, ppu.patternTable1, 4*KB);
+  }
+}
 
 void loadProgramBank() {
   unsigned char bankNumber = mmc1.prgBank & 0b00001111;

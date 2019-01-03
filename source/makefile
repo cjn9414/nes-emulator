@@ -8,10 +8,10 @@ LIBS := -lSDL2
 
 CFLAGS := -I$(IDIR) -w -std=c99
 
-_DEPS := display.h main.h cpu.h registers.h memory.h mmc1.h
+_DEPS := display.h main.h cpu.h registers.h memory.h ppu.h mmc1.h
 DEPS := $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ := display.o main.o cpu.o registers.o memory.o mmc1.o
+_OBJ := display.o main.o cpu.o registers.o memory.o ppu.o mmc1.o
 OBJ := $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 

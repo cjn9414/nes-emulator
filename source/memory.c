@@ -4,9 +4,7 @@
 extern struct registers regs;
 
 unsigned char ram[0x0800];
-unsigned char ram_mirror[0x1800];
 unsigned char ppu_reg[0x0008];
-unsigned char ppu_reg_mirror[0x1FF8];
 unsigned char apu_io_reg[0x0020];
 unsigned char exp_rom[0x1FDF];
 unsigned char sram[0x2000];
@@ -51,16 +49,10 @@ void writeByte (unsigned short addr, unsigned char val) {
   if (addr < 0x2000) {
     addr = addr % 0x0800;
     ram[addr] = val;
-    ram[addr + 0x0800] = val;
-    ram[addr + 0x1000] = val;
   }
 
   else if (addr < 0x4000) {
     addr = 0x2000 + (addr % 0x0008);
-    while (addr < 0x4000) {
-      ppu_reg[addr] = val;
-      addr += 0x0008;
-    }
   }
 
   else if (addr < 0x4020) {
