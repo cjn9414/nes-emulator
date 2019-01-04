@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "main.h"
-#include "display.h"
 #include "registers.h"
 #include "mmc1.h"
+#include "visualTest.h"
 #define KB 1024
 #define MAX_SIZE 64*KB
 
@@ -63,8 +63,7 @@ int main(int argc, char **argv) {
 
   mmc1Powerup();
   loadMMC1Ptrs(programData, graphicData);
-  loadPPU(&graphicData);
-  //runDisplay();
+  runDisplay();
   return 0;
 }
 
