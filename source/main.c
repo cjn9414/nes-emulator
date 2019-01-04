@@ -63,6 +63,7 @@ int main(int argc, char **argv) {
 
   mmc1Powerup();
   loadMMC1Ptrs(programData, graphicData);
+  loadPPU(&graphicData);
   //runDisplay();
   return 0;
 }

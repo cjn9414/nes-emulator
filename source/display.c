@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include "SDL2/SDL.h"
 #include "display.h"
-#define SCREEN_WIDTH  1280
-#define SCREEN_HEIGHT 720
+#define SCREEN_WIDTH  256
+#define SCREEN_HEIGHT 240
 
 typedef struct {
   SDL_Renderer *renderer;

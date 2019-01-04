@@ -53,18 +53,18 @@ void mmc1Powerup(void) {
   mmc1Reset();
 }
 
-void loadChrBanks(void) {
+void loadChrBanks(unsigned char * pTablePtr0, unsigned char * pTablePtr1) {
   unsigned char bankNumber = mmc1.chrBank0 & 0b00011111;
   unsigned int addrStart = 8*KB*bankNumber;
   if (getBit(mmc1.mainControl, 4)) {  // two 4KB banks
-    memcpy(graphicData + addrStart, ppu.patternTable0, 4*KB);
+    memcpy(graphicData + addrStart, pTablePtr0, 4*KB);
     bankNumber = mmc1.chrBank1 & 0b00011111;
     addrStart = 8*KB*bankNumber;
-    memcpy(graphicData + addrStart, ppu.patternTable1, 4*KB);
+    memcpy(graphicData + addrStart, pTablePtr1, 4*KB);
   } else { // one 8KB bank
-    memcpy(graphicData + addrStart, ppu.patternTable0, 4*KB);
+    memcpy(graphicData + addrStart, pTablePtr0, 4*KB);
     addrStart += 4*KB;
-    memcpy(graphicData + addrStart, ppu.patternTable1, 4*KB);
+    memcpy(graphicData + addrStart, pTablePtr1, 4*KB);
   }
 }
 

@@ -1,6 +1,24 @@
 #include "ppu.h"
+#define KB 1024
 
-struct PPU ppu;
+typedef struct {
+  unsigned char tbl[0x20][0x1E];  // 32x30
+  unsigned char attr[0x8][0x8];
+} NameTable;
+
+//PatternTable pTable0;
+//PatternTable pTable1;
+
+unsigned char pTable0[0x1000];
+unsigned char pTable1[0x1000];
+
+NameTable nTable0;
+NameTable nTable1;
+NameTable nTable2;
+NameTable nTable3;
+
+unsigned char imagePalette[0x10];
+unsigned char spritePalette[0x10];
 
 struct color palette[48] = {
   { 0x00, {0x75, 0x75, 0x75} },
@@ -69,6 +87,25 @@ struct color palette[48] = {
   { 0x3F, {0x00, 0x00, 0x00} },
 };
 
+void loadPPU (unsigned char * graphics) {
+  memcpy(graphics, &pTable0, 4*KB);
+  graphics += 4*KB;
+  memcpy(graphics, &pTable1, 4*KB);
+  graphics += 4*KB;
+  memcpy(graphics, &nTable0, KB);
+  graphics += KB;
+  memcpy(graphics, &nTable1, KB);
+  graphics += KB;
+  memcpy(graphics, &nTable2, KB);
+  graphics += KB;
+  memcpy(graphics, &nTable3, KB);
+  graphics += KB;
+  memcpy(graphics, imagePalette, sizeof(unsigned char)*0x10);
+  graphics += sizeof(unsigned char)*0x10;
+  memcpy(graphics, spritePalette, sizeof(unsigned char)*0x10);
+  graphics += sizeof(unsigned char)*0x10;
+}
+
 unsigned char readPictureByte(unsigned short addr) {
   addr %= 0x4000;
   
@@ -77,44 +114,45 @@ unsigned char readPictureByte(unsigned short addr) {
     addr = addr%0x0020 + 0x3F00;
   }
 
-  if (addr < 0x1000) {
-    return ppu.patternTable0[addr];
-  } 
+  //if (addr < 0x1000) {
+    //return pTable0.tiles[addr];
+  //} 
   
-  else if (addr < 0x2000) {
-    return ppu.patternTable1[addr - 0x1000];
-  } 
+  //else if (addr < 0x2000) {
+    //return pTable1.tiles[addr - 0x1000];
+  //} 
   
   else if (addr < 0x23C0) {
-    return ppu.nameTable0[addr - 0x2000];
+    return nTable0.tbl[addr - 0x2000];
   }
 
   else if (addr < 0x2400) {
-    return ppu.attrTable0[addr - 0x23C0];
+    return nTable0.attr[addr - 0x23C0];
   }
 
   else if (addr < 0x27C0) {
-    return ppu.nameTable1[addr - 0x2400];
+    return nTable1.tbl[addr - 0x2400];
   }
 
   else if (addr < 0x2800) { 
-    return ppu.attrTable1[addr - 0x27C0];
+    return nTable1.attr[addr - 0x27C0];
   }
 
   else if (addr < 0x2BC0) { 
-    return ppu.nameTable2[addr - 0x2800];
+    return nTable2.tbl[addr - 0x2800];
   }
     
   else if (addr < 0x2C00) { 
-    return ppu.attrTable2[addr - 0x2BC0];
+    return nTable2.attr[addr - 0x2BC0];
   }
 
   else if (addr < 0x2FC0) { 
-    return ppu.nameTable3[addr - 0x2C00];
+    return nTable3.tbl[addr - 0x2C00];
   }
 
   else {
-    return ppu.attrTable3[addr - 0x2FC0];
+    return nTable3.attr[addr - 0x2FC0];
   }
 }
+
 
