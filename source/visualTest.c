@@ -27,6 +27,7 @@ extern NameTable nTable3;
 extern unsigned char imagePalette[0x10];
 extern unsigned char spritePalette[0x10];
 extern const struct color palette[48];
+extern struct Header head;
 
 Tile tiles[0x100];
 Uint32 * pixels;
@@ -50,8 +51,8 @@ void init(void) {
   display.texture = SDL_CreateTexture(display.renderer, 
     SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, SCREEN_WIDTH, SCREEN_HEIGHT);
  
-  //unsigned long * pixels = new unsigned long[SCREEN_WIDTH*SCREEN_HEIGHT]; 
   pixels = malloc(sizeof(Uint32)*SCREEN_WIDTH*SCREEN_HEIGHT);
+  memset(pixels, 0xFFFFFFFF, sizeof(Uint32)*SCREEN_WIDTH*SCREEN_HEIGHT);
   if (pixels == NULL) {
     printf("Couldn't allocate memory.\n");
     exit(1);
@@ -94,7 +95,7 @@ void loadDisplay(Uint32 * pixels) {
   //iterate through first 64/256 tiles
   for (int i = 0; i < 0x40; i++) {
     for (int j = 0; j < 0x40; j++) {
-      *(pixels + ((i*0x40) + j)*sizeof(Uint32)) = tiles[i].argb[j/8][j%8];
+      *(pixels + ((i*0x40) + j)) = tiles[i].argb[j/8][j%8];
     }
   }
 }
@@ -115,13 +116,14 @@ void handleEvent(void) {
 
 void prepareScene(void)
 {
+  SDL_UpdateTexture(display.texture, NULL, pixels, SCREEN_WIDTH*sizeof(Uint32));
 	SDL_RenderClear(display.renderer);
   SDL_RenderCopy(display.renderer, display.texture, NULL, NULL);
 }
 
 void presentScene(void)
 {
-	SDL_RenderPresent(display.renderer);
+  SDL_RenderPresent(display.renderer);
 }
 
 void cleanup(void) {
