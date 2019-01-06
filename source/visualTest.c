@@ -7,13 +7,9 @@
 #define SCREEN_HEIGHT 240
 
 typedef struct {
-  Uint32 argb[0x8][0x8];
-} Tile;
-
-typedef struct {
   SDL_Renderer *renderer;
   SDL_Window *window;
-  SDL_Texture *texture;
+  SDL_Texture *texture[32*30];
 } EmuDisplay;
 
 EmuDisplay display;
@@ -29,8 +25,8 @@ extern unsigned char spritePalette[0x10];
 extern const struct color palette[48];
 extern struct Header head;
 
-Tile tiles[0x100];
-Uint32 * pixels;
+Uint32 ** pixels;
+SDL_Surface *tiles [32*30];
 
 void init(void) {
   int rendererFlags, windowFlags;
@@ -48,9 +44,6 @@ void init(void) {
   }
   SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
   display.renderer = SDL_CreateRenderer(display.window, -1, rendererFlags);
-  display.texture = SDL_CreateTexture(display.renderer, 
-    SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, SCREEN_WIDTH, SCREEN_HEIGHT);
- 
   pixels = malloc(sizeof(Uint32)*SCREEN_WIDTH*SCREEN_HEIGHT);
   memset(pixels, 0xFFFFFFFF, sizeof(Uint32)*SCREEN_WIDTH*SCREEN_HEIGHT);
   if (pixels == NULL) {
@@ -62,7 +55,6 @@ void init(void) {
     exit(1);
   }
   loadTiles();
-  loadDisplay(pixels);
 }
 
 Uint32 color2int(struct color c) {
@@ -70,32 +62,40 @@ Uint32 color2int(struct color c) {
   return val;
 }
 
-void loadTiles(void) {
-  // iterate through the pattern table, 16 bytes at a time
-  for (int i = 0; i < 0x1000; i += 0x10) {
-    // tile to be added to list of tiles
-    Tile tile;
-    unsigned char idx;
-    // iterate through first half of bytes of the tile
-    for (int j = 0; j < 0x8; j++) {
-      unsigned char b1 = pTable0[i+j];
-      unsigned char b2 = pTable0[i+j+8];
-      // iterate through each bit of the tile
-      for (int k = 7; k >= 0; k--) {
-        idx = 0b00000001 & getBit(b1, k);
-        idx = idx | (getBit(b2, k) << 1);
-        tile.argb[j][7-k] = color2int(palette[idx]);
-      }
-    }
-    tiles[i/0x10] = tile;
+void renderTiles(void) {
+  for (int i = 0; i < 32*30; i++) {
+    SDL_Rect loc = { 8*(i%32), 8*(i/32), 8, 8 };
+    SDL_RenderCopy(display.renderer, display.texture[i], NULL, &loc);
   }
 }
 
-void loadDisplay(Uint32 * pixels) {
-  //iterate through first 64/256 tiles
-  for (int i = 0; i < 0x40; i++) {
-    for (int j = 0; j < 0x40; j++) {
-      *(pixels + ((i*0x40) + j)) = tiles[i].argb[j/8][j%8];
+void loadTiles(void) {
+  for (int i = 0; i < 32*30; i++) {
+    SDL_Surface * tile = tiles[i];
+    tile = SDL_CreateRGBSurfaceWithFormat(
+      0, 8, 8, 32, SDL_PIXELFORMAT_ARGB8888);
+    if (tile == NULL) {
+      SDL_Log("SDL_CreateRGBSurfaceWithFormat() failed: %s", SDL_GetError());
+      exit(1);
+    }
+    getTileData(tile, i);
+    display.texture[i] = SDL_CreateTextureFromSurface(display.renderer, tile);
+    SDL_FreeSurface(tile);
+  }
+}
+
+void getTileData(SDL_Surface * tile, int offset) {
+  unsigned char idx;
+  Uint32 * tilePixels = (Uint32*) tile->pixels;
+  // iterate through first half of bytes of the tile
+  for (int row = 0; row < 0x8; row++) {
+    unsigned char b1 = pTable0[offset+row];
+    unsigned char b2 = pTable0[offset+row+8];
+    // iterate through each bit of the tile
+    for (int col = 7; col >= 0; col--) {
+      idx = 0b00000001 & getBit(b1, col);
+      idx = idx | (getBit(b2, col) << 1);
+      tilePixels[ (row * tile->w) + col ] = 0xFF000000 | color2int(palette[idx]);
     }
   }
 }
@@ -116,9 +116,8 @@ void handleEvent(void) {
 
 void prepareScene(void)
 {
-  SDL_UpdateTexture(display.texture, NULL, pixels, SCREEN_WIDTH*sizeof(Uint32));
 	SDL_RenderClear(display.renderer);
-  SDL_RenderCopy(display.renderer, display.texture, NULL, NULL);
+  renderTiles();
 }
 
 void presentScene(void)
@@ -129,7 +128,9 @@ void presentScene(void)
 void cleanup(void) {
   SDL_DestroyRenderer(display.renderer); 
   SDL_DestroyWindow(display.window); 
-  SDL_DestroyTexture(display.texture);
+  for (int i = 0; i < 32*30; i++) {
+    SDL_DestroyTexture(display.texture[i]);
+  }
   free(pixels);
   SDL_Quit();
 }
@@ -154,7 +155,6 @@ unsigned char doInput(void) {
 
 void runDisplay(void)
 {
-	//memset(&display, 0, SCREEN_WIDTH*SCREEN_HEIGHT*(sizeof(unsigned long)));
   init();
 	atexit(cleanup);
   while (1)
