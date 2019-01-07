@@ -325,7 +325,7 @@ unsigned char getFlagOverflow(void) { return (regs.p << 2) >> 7; }
 unsigned char getFlagNegative(void) { return (regs.p << 1) >> 7; }
 
 unsigned char getBit(unsigned char byte, unsigned char bit) {
-  return (byte << (7-bit)) >> 7;
+  return (byte & (1 << bit)) >> bit;
 }
 
 void VFlag(unsigned char a, unsigned char b, unsigned char c) {

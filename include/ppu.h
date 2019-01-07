@@ -2,8 +2,8 @@
 #define PPU_H
 
 typedef struct {
-  unsigned char tbl[0x20][0x1E];
-  unsigned char attr[0x8][0x8];
+  unsigned char tbl[32*30];
+  unsigned char attr[8*8];
 } NameTable;
 
 struct color {

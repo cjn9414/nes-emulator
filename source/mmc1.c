@@ -9,6 +9,11 @@ extern struct Header head;
 extern unsigned char prg_rom_lower[0x4000];
 extern unsigned char prg_rom_upper[0x4000];
 
+extern unsigned char pTable0[0x1000];
+extern unsigned char pTable1[0x1000];
+
+extern NameTable nTable0;
+
 unsigned char * programData;
 unsigned char * graphicData;
 
@@ -17,6 +22,9 @@ extern struct PPU ppu;
 void loadMMC1Ptrs(unsigned char * p, unsigned char * g) {
   programData = p;
   graphicData = g;
+  memcpy(pTable0, g, 1000);
+  memcpy(nTable0.tbl, g+0x2000, 0x3C0);
+  memcpy(nTable0.attr, g+0x23C0, 0x40);
 }
 
 void mmc1Reset(void) {
@@ -31,10 +39,10 @@ void mmc1Write(unsigned short addr, unsigned char val) {
       mmc1.mainControl = mmc1.shift;
     } else if (addr >= 0xA000 && addr < 0xC000) {
       mmc1.chrBank0 = mmc1.shift;
-      loadChrBanks();
+      loadChrBanks(&pTable0, &pTable1);
     } else if (addr >= 0xC000 && addr < 0xE000) {
       mmc1.chrBank1 = mmc1.shift;
-      loadChrBanks();
+      loadChrBanks(&pTable0, &pTable1);
     } else if (addr >= 0xE000) {
       mmc1.prgBank = mmc1.shift;
       loadProgramBank();
