@@ -3,7 +3,7 @@
 #include "SDL2/SDL.h"
 #include "ppu.h"
 #include "cpu.h"
-#define SCREEN_WIDTH  256
+#define SCREEN_WIDTH 256
 #define SCREEN_HEIGHT 240
 #define TILE_ROW 32
 #define TILE_COL 30
@@ -63,36 +63,38 @@ void renderTiles(void) {
     SDL_Rect loc;
     loc = (SDL_Rect) { 8*(i%TILE_ROW), 8*(i/TILE_ROW), 8, 8 };
     SDL_Texture * textureToRender = display.texture[nTable0.tbl[i]];
+    //SDL_Texture * textureToRender = display.texture[i];
     SDL_RenderCopy(display.renderer, textureToRender, NULL, &loc);
     
     loc = (SDL_Rect) { 8 + 8*(i%TILE_ROW), 8*(i/TILE_ROW), 8, 8 };
     textureToRender = display.texture[nTable0.tbl[i+1]];
+    //textureToRender = display.texture[i+1];
     SDL_RenderCopy(display.renderer, textureToRender, NULL, &loc);
     
     loc = (SDL_Rect) { 8*(i%TILE_ROW), 8 + 8*(i/TILE_ROW), 8, 8 };
-    textureToRender = display.texture[nTable0.tbl[i+2]];
+    textureToRender = display.texture[nTable0.tbl[TILE_ROW+i]];
+    //textureToRender = display.texture[i+2];
     SDL_RenderCopy(display.renderer, textureToRender, NULL, &loc);
     
     loc = (SDL_Rect) { 8 + 8*(i%TILE_ROW), 8 + 8*(i/TILE_ROW), 8, 8 };
-    textureToRender = display.texture[nTable0.tbl[i+3]];
+    textureToRender = display.texture[nTable0.tbl[TILE_ROW+i+1]];
+    //textureToRender = display.texture[i+3];
     SDL_RenderCopy(display.renderer, textureToRender, NULL, &loc);
-    //printf("\n");
   }
 }
 
 void loadTiles(void) {
   for (int i = 0; i < 64; i++) {  // size of attribute table
-    SDL_Surface * tile = tiles[i];
-    tile = SDL_CreateRGBSurfaceWithFormat(
-      0, 8, 8, 32, SDL_PIXELFORMAT_ARGB8888);
-    if (tile == NULL) {
-      SDL_Log("SDL_CreateRGBSurfaceWithFormat() failed: %s", SDL_GetError());
-      exit(1);
-    }
-
     unsigned char idx = 0;
     int offset;
     for (int j = 0; j < 16; j++) {  // number of tiles per chunk of attribute table
+      SDL_Surface * tile = tiles[j + (16*i)];
+      tile = SDL_CreateRGBSurfaceWithFormat(
+        0, 8, 8, 32, SDL_PIXELFORMAT_ARGB8888);
+      if (tile == NULL) {
+        SDL_Log("SDL_CreateRGBSurfaceWithFormat() failed: %s", SDL_GetError());
+        exit(1);
+      }
       offset = 4*(i%8);
       if (j < 4) {
         idx = (0x3 & nTable0.attr[i]) << 2; // get bits 1/0
@@ -109,7 +111,8 @@ void loadTiles(void) {
       if (j % 4 > 1) offset += TILE_ROW;
       if (j % 2 == 1) offset += 1;
       getPatternData(tile, offset, idx);
-      display.texture[i] = SDL_CreateTextureFromSurface(display.renderer, tile);
+      display.texture[j + (16*i)] = SDL_CreateTextureFromSurface(display.renderer, tile);
+      SDL_FreeSurface(tile);
     }
   }
 }
@@ -117,13 +120,14 @@ void loadTiles(void) {
 void getPatternData(SDL_Surface * tile, int offset, unsigned char idx) {
   Uint32 * tilePixels = (Uint32*) tile->pixels;
   // iterate through first half of bytes of the tile
+  unsigned char upperBits = idx; 
   for (int row = 0; row < 0x8; row++) {
     unsigned char b1 = pTable0[offset+row];
     unsigned char b2 = pTable0[offset+row+8];
     // iterate through each bit of the tile
     for (int col = 7; col >= 0; col--) {
-      idx = idx | getBit(b1, col);
-      idx = idx | (getBit(b2, col) << 1);
+      idx = upperBits | getBit(b1, col);
+      idx = upperBits | (getBit(b2, col) << 1);
       tilePixels[ (row * tile->w) + col ] = color2int(palette[idx]);
     }
   }

@@ -22,9 +22,9 @@ extern struct PPU ppu;
 void loadMMC1Ptrs(unsigned char * p, unsigned char * g) {
   programData = p;
   graphicData = g;
-  memcpy(pTable0, g, 1000);
-  memcpy(nTable0.tbl, g+0x2000, 0x3C0);
-  memcpy(nTable0.attr, g+0x23C0, 0x40);
+  memcpy(pTable0, graphicData, 0x1000);
+  memcpy(nTable0.tbl, graphicData+0x2000, 0x3C0);
+  memcpy(nTable0.attr, graphicData+0x23C0, 0x40);
 }
 
 void mmc1Reset(void) {

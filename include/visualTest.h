@@ -2,5 +2,6 @@
 #define VISUAL_TEST_H
 
 void runDisplay(void);
+void attPr(void);
 
 #endif
