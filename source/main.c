@@ -120,6 +120,7 @@ int main(int argc, char **argv) {
   
   // Terminate the file pointer.
   fclose(file);
+  
   // Load the on-power status of the memory mapper and the cpu registers.
   mmc1Powerup();
   registerPowerup(&regs);
@@ -128,6 +129,7 @@ int main(int argc, char **argv) {
   // Run the emulator display.
   runDisplay();
   
+  // Free dynamically allocated memory.
   free(programData);
   free(graphicData);
   if (head.trainerBit) free(trainer);
