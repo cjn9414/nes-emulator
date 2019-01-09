@@ -22,20 +22,22 @@ struct MMC1 mmc1;
  * especially with respect to the graphics.
  */
 signed char loadHeader(FILE *file, struct Header* head) {
-  
   // Declaring variables that will contain data from
   // the .nes file, which can then be fed into the 
   // attributes of the struct Header instance.
   unsigned char inspectByte;
-  unsigned char * format = malloc(3);
+  unsigned char format[3];
   
-  // Copies data from file into previously declared variables.
+  // Copies data from file into previously declared variable.
   fread(format, sizeof(unsigned char), 3, file);
-  fread(inspectByte, sizeof(unsigned char), 1, file);
   
-  // All .nes formats must begin with "NES" followed by 0x1A.
-  if (strcmp(format, "NES") != 0 || inspectByte != 0x1A) return -1;
+  // All .nes formats must begin with "NES".
+  if (strcmp(format, "NES") != 0) return -1;
   
+  // Loads byte from file into inspection byte, checking for file legitimacy.
+  fread(&inspectByte, sizeof(unsigned char), 1, file);
+  if (inspectByte != 0x1A) return -1;
+
   // Loads the number of 16 KB PRG banks and 8 KB CHR banks
   // from the header into the respective variables.
   fread(&(head->n_prg_banks), sizeof(unsigned char), 1, file);
@@ -101,16 +103,15 @@ int main(int argc, char **argv) {
     printf("Wrong file type or corrupted file. Please use a .nes file.\n");
     exit(1);
   }
-
   // Declare the ROM data that will be copied from the .nes file.
   unsigned char * programData = malloc(16*KB*head.n_prg_banks);
   unsigned char * graphicData = malloc(8*KB*head.n_chr_banks);
   unsigned char * trainer;
 
   // If the trainer exists in the file, load it into the array.
-  if (head.trainerBit > 0) {
+  if (head.trainerBit) {
     trainer = malloc(512);
-    fread(trainer, sizeof(unsigned char), KB/2, file); 
+    fread(trainer, sizeof(unsigned char), 512, file); 
   }
   
   // Load the program and graphic data into the respective arrays.
@@ -119,7 +120,6 @@ int main(int argc, char **argv) {
   
   // Terminate the file pointer.
   fclose(file);
-  
   // Load the on-power status of the memory mapper and the cpu registers.
   mmc1Powerup();
   registerPowerup(&regs);
@@ -128,6 +128,10 @@ int main(int argc, char **argv) {
   // Run the emulator display.
   runDisplay();
   
+  free(programData);
+  free(graphicData);
+  if (head.trainerBit) free(trainer);
+
   return 0;
 }
 
