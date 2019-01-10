@@ -246,7 +246,7 @@ void getPatternData(SDL_Surface * tile, int offset, unsigned char idx) {
  */
 void prepareScene(void)
 {
-	SDL_RenderClear(display.renderer);
+  SDL_RenderClear(display.renderer);
   renderTiles();
 }
 
