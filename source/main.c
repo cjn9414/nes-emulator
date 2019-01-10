@@ -14,8 +14,8 @@ struct Header head;
 struct MMC1 mmc1;
 
 
-/*
- * This function is called from the main function to
+/**
+ * Called once from the main function to
  * load data from the .nes file into the header struct.
  * The header of the .nes file is critical as it
  * dictates how exactly the emulator will operate, 
@@ -64,14 +64,13 @@ signed char loadHeader(FILE *file, struct Header* head) {
   return 0;
 }
 
-/*
+/**
  * This is the function that will be called when the
- * emulator program is ran. This function is responsible for  
+ * emulator program is run. This function is responsible for  
  * setting up all important functions of the emulator, and 
  * calling functions that will operate the processors of the
  * NES as well as the graphics using the SDL2 library.
  */
-
 int main(int argc, char **argv) {
  
   // Declaring the string that represents the name of the .nes file.

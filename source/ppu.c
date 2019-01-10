@@ -1,17 +1,21 @@
 #include "ppu.h"
 #define KB 1024
 
+// Declares the two patten tables in PPU memory.
 unsigned char pTable0[0x1000];
 unsigned char pTable1[0x1000];
 
+// Declares the four name tables in PPU memory.
 NameTable nTable0;
 NameTable nTable1;
 NameTable nTable2;
 NameTable nTable3;
 
+// Declares the image and sprite palettes in PPU memory.
 unsigned char imagePalette[0x10];
 unsigned char spritePalette[0x10];
 
+// Defines the palette for the NES.
 const struct color palette[48] = {
   {0x75, 0x75, 0x75},
   {0x27, 0x1B, 0x8F},
@@ -79,50 +83,64 @@ const struct color palette[48] = {
   {0x00, 0x00, 0x00},
 };
 
+
+
+/**
+ * Reads a byte from PPU memory.
+ * 
+ * @param addr: Address to read byte of PPU memory from.
+ *
+ * @returns: Value of PPU memory at desired address.
+ */
 unsigned char readPictureByte(unsigned short addr) {
+  // Mirroring occurs every 16 KB in PPU
   addr %= 0x4000;
   
+  // Mirroring occurs from $2000-$2EFF at $3000-$3F00.
   if (addr >= 0x3000 && addr < 0x3F00) addr -= 0x1000;
+  
+  // Mirroring occurs from $3F00-$3F1F at $3F20-$3FFF.
   if (addr >= 0x3F20 && addr < 0x4000) {
     addr = addr%0x0020 + 0x3F00;
   }
-
+  
+  // Addressing first pattern table in PPU memory.
   if (addr < 0x1000) {
     return pTable0[addr];
   } 
-  
+  // Addressing second pattern table in PPU memory.
   else if (addr < 0x2000) {
     return pTable1[addr - 0x1000];
   } 
-  
+  // Addressing first name table in PPU memory.
   else if (addr < 0x23C0) {
     return nTable0.tbl[addr - 0x2000];
   }
-
+  // Addressing first attribute table in PPU memory.
   else if (addr < 0x2400) {
     return nTable0.attr[addr - 0x23C0];
   }
-
+  // Addressing second name table in PPU memory.
   else if (addr < 0x27C0) {
     return nTable1.tbl[addr - 0x2400];
   }
-
+  // Addressing second attribute table in PPU memory.
   else if (addr < 0x2800) { 
     return nTable1.attr[addr - 0x27C0];
   }
-
+  // Addressing third name table in PPU memory.
   else if (addr < 0x2BC0) { 
     return nTable2.tbl[addr - 0x2800];
-  }
-    
+  } 
+  // Addressing third attribute table in PPU memory.
   else if (addr < 0x2C00) { 
     return nTable2.attr[addr - 0x2BC0];
   }
-
+  // Addressing fourth name table in PPU memory.
   else if (addr < 0x2FC0) { 
     return nTable3.tbl[addr - 0x2C00];
   }
-
+  // Addressing fourth attribute table in PPU memory.
   else {
     return nTable3.attr[addr - 0x2FC0];
   }

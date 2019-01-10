@@ -72,34 +72,36 @@ unsigned char readZeroPage(unsigned char addr) {
  * @param val: Desired value to write into CPU memory.
  */
 void writeByte (unsigned short addr, unsigned char val) {
-  if (addr < 0x2000) {
-    addr = addr % 0x0800;
-    ram[addr] = val;
-  }
-
-  else if (addr < 0x4000) {
+  // Mirroring occurs from $2000-$2007 to $2008-$4000.
+  if (addr >= 0x2008 && addr < 0x4000) {
     addr = 0x2000 + (addr % 0x0008);
   }
-
+  
+  // Mirroring occurs from $0000-$07FF to $0800-$1FFF.
+  if (addr < 0x2000) {
+    addr = addr % 0x0800;
+    // Write to CPU RAM.
+    ram[addr] = val;
+  }
+  // Write to PPU registers in CPU memory.
+  else if (addr < 0x2008) {
+    ppu_reg[addr - 0x2000];
+  }
+  // Write to Audio Processing registers in CPU memory.
   else if (addr < 0x4020) {
     apu_io_reg[addr - 0x4000] = val;
   }
-
+  // Write to Expansion ROM in CPU memory.
   else if (addr < 0x6000) {
     exp_rom[addr - 0x4020] = val;
   }
-
+  // Write to SRAM in CPU memory.
   else if (addr < 0x8000){
     sram[addr - 0x6000] = val;
   }
-
-  else if (addr < 0xC000) {
-    prg_rom_lower[addr - 0x8000] = val;
-    mmc1Write(addr, val);
-  }
-
+  // Write to PRG ROM bank(s).
+  // This actually causes a serial write with MMC1.
   else {
-    prg_rom_upper[addr - 0xC000] = val;
     mmc1Write(addr, val);
   }
 }
