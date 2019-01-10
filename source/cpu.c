@@ -23,7 +23,15 @@
 
 extern struct registers regs;
 
-// instruction name, address mode, address, length in bytes
+/**
+ * Contains all information on CPU opcodes and addressing modes.
+ * There are 56 unique opcodes and 13 different addressing modes,
+ * which end up yielding a total of 151 unique instructions for 
+ * the 6502 processor. The other 105 elements in this array 
+ * represent invalid instructions, and will return an error if
+ * one is used. All instructions are ordered.
+ *
+ */
 const struct opcode opcodes[256] = {
   {"BRK", IMPLIED, 1},    // 0x00
   {"ORA", INDIRECT_X, 2},
@@ -289,6 +297,15 @@ const struct opcode opcodes[256] = {
 //}
 
 
+/**
+ * The next set of functions will either set or clear a flag
+ * in the status register. For each function:
+ *
+ * @param bit: 0 to clear a flag, anything else to set a flag.
+ *
+ * @returns: Nothing.
+ */
+
 void setFlagCarry(unsigned char bit)  {
   regs.p = bit ? regs.p | 0b00000001 : regs.p & 0b11111110;
 }
@@ -312,6 +329,14 @@ void setFlagNegative(unsigned char bit) {
   regs.p = bit ? regs.p | 0b10000000 : regs.p & 0b01111111;
 }
 
+
+/**
+ * The next set of functions will retrieve a flag
+ * from the status register. For each function:
+ *
+ * @returns: Flag value. Returns 1 for set or 0 for clear.
+ */
+
 unsigned char getFlagCarry(void) { return (regs.p << 7) >> 7; }
 
 unsigned char getFlagZero(void) { return (regs.p << 6) >> 7; }
@@ -324,10 +349,26 @@ unsigned char getFlagOverflow(void) { return (regs.p << 2) >> 7; }
 
 unsigned char getFlagNegative(void) { return (regs.p << 1) >> 7; }
 
+
+/**
+ * Retrieves a selected bit from a given byte.
+ *
+ * @param byte: Byte in which a bit is retrieved from.
+ * @param bit: Bit (7...0) that is retrieved from the byte.
+ *
+ * @returns: 1 or 0, if the selected bit is set or not.
+ */
 unsigned char getBit(unsigned char byte, unsigned char bit) {
   return (byte & (1 << bit)) >> bit;
 }
 
+/**
+ * Determines if the overflag should be set after an instruction.
+ *
+ * @param a: First argument to the instruction.
+ * @param b: Second argument to the instruction. 
+ * @param c: Resolution to the instruction.
+ */
 void VFlag(unsigned char a, unsigned char b, unsigned char c) {
   if ((!getBit(a, 7) && !getBit(b, 7) && getBit(c, 7)) ||
       (getBit(a, 7) && getBit(b, 7) && !getBit(c, 7))) {
@@ -335,6 +376,12 @@ void VFlag(unsigned char a, unsigned char b, unsigned char c) {
   } else setFlagOverflow(0);
 }
 
+/**
+ * Determines if the Zero and Negative flags should be
+ * set after an instruction.
+ *
+ * @param val: Resolution to an instruction.
+ */
 void SZFlags(unsigned char val) {
   if (val == 0) setFlagZero(1);
   else if (val >> 7) setFlagNegative(1);
@@ -344,6 +391,15 @@ void SZFlags(unsigned char val) {
   }
 }
 
+/**
+ * Helper function to branch instructions.
+ * Handles two's complement argument for the
+ * branch instruction.
+ *
+ * @param val: Signed program counter offset.
+ *             Negative numbers move the
+ *             program counter backwards.
+ */
 void branchJump(unsigned char val) {
   if (getBit(7, val) == 0) {
     regs.pc += val;
@@ -352,6 +408,11 @@ void branchJump(unsigned char val) {
     regs.pc -= val;
   }
 }
+
+
+/****************************/
+/* START OF OPCODE FUNCTIONS*/
+/****************************/
 
 void brk(void) { setFlagBreak(1); }  //0x00
 
