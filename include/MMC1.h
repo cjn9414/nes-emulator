@@ -9,10 +9,10 @@ struct MMC1 {
   unsigned char shift;
 };
 
+unsigned char MMC1Setup(void);
 void loadMMC1Ptrs(unsigned char *, unsigned char *);
 void mmc1Reset(void);
 void mmc1Write(unsigned short, unsigned char);
-void mmc1Powerup(void);
 void loadChrBank0(void);
 void loadChrBank1(void);
 void loadProgramBank();

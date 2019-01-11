@@ -38,7 +38,7 @@ extern struct Header head;
  * Called once upon the display startup to properly initialize
  * the display and set up key components of the NES graphics.
  */
-void init(void) {
+void displayInit(void) {
   // Define flags for SDL_Window and SDL_Renderer.
   int rendererFlags, windowFlags;
   rendererFlags = SDL_RENDERER_ACCELERATED;
@@ -106,28 +106,32 @@ void renderTiles(void) {
     
     // Find the texture to render and copy it to the display
     // at the correct location.
-    SDL_Texture * textureToRender = display.texture[nTable0.tbl[i]];
+    //SDL_Texture * textureToRender = display.texture[nTable0.tbl[i]];
+    SDL_Texture * textureToRender = display.texture[i];
     SDL_RenderCopy(display.renderer, textureToRender, NULL, &loc);
     
     // Update SDL_Rect instance to represent top-right tile of a 
     // 2x2 tile area on the screen.
     loc = (SDL_Rect) { 8 + 8*(i%TILE_ROW), 8*(i/TILE_ROW), 8, 8 };
     
-    textureToRender = display.texture[nTable0.tbl[i+1]];
+    //textureToRender = display.texture[nTable0.tbl[i+1]];
+    textureToRender = display.texture[i+1];
     SDL_RenderCopy(display.renderer, textureToRender, NULL, &loc);
     
     // Update SDL_Rect instance to represent bottom-left 
     // tile of a 2x2 tile area on the screen.
     loc = (SDL_Rect) { 8*(i%TILE_ROW), 8 + 8*(i/TILE_ROW), 8, 8 };
     
-    textureToRender = display.texture[nTable0.tbl[i+3]];
+    //textureToRender = display.texture[nTable0.tbl[i+2]];
+    textureToRender = display.texture[i+2];
     SDL_RenderCopy(display.renderer, textureToRender, NULL, &loc);
     
     // Update SDL_Rect instance to represent bottom-right
     // tile of a 2x2 tile area on the screen.
     loc = (SDL_Rect) { 8 + 8*(i%TILE_ROW), 8 + 8*(i/TILE_ROW), 8, 8 };
     
-    textureToRender = display.texture[nTable0.tbl[i+4]];
+    //textureToRender = display.texture[nTable0.tbl[i+3]];
+    textureToRender = display.texture[i+3];
     SDL_RenderCopy(display.renderer, textureToRender, NULL, &loc);
   }
 }
@@ -221,7 +225,7 @@ void getPatternData(SDL_Surface * tile, int offset, unsigned char idx) {
   unsigned char upperBits = idx;
 
   // Iterate through each byte in a tile from the pattern table.
-  for (int row = 0; row < 0x8; row++) {
+  for (int row = 0; row < 8; row++) {
     // Get two dependent bytes from the tile.
     unsigned char b1 = pTable0[offset+row];
     unsigned char b2 = pTable0[offset+row+8];
@@ -234,7 +238,7 @@ void getPatternData(SDL_Surface * tile, int offset, unsigned char idx) {
       
       // Find the color in the palette from the index, and 
       // set the respective address in the pixel data array to the color.
-      tilePixels[ (row * tile->w) + col ] = color2int(palette[idx]);
+      tilePixels[ (row * tile->w) + (7-col) ] = color2int(palette[idx]);
     }
   }
 }
@@ -306,7 +310,7 @@ unsigned char handleEvent(void) {
  */
 void runDisplay(void)
 {
-  init();
+  displayInit();
 	atexit(cleanup);
   while (1)
 	{

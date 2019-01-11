@@ -1,4 +1,6 @@
-#include "mmc1.h"
+// MMC1 memory mapper formally known as SxROM
+
+#include "mappers.h"
 #include "cpu.h"
 #include "main.h"
 #include "ppu.h"
@@ -14,10 +16,12 @@ extern unsigned char pTable1[0x1000];
 
 extern NameTable nTable0;
 
+extern struct PPU ppu;
+
+// Declare pointers to the cartridge PRG ROM and CHR ROM.
 unsigned char * programData;
 unsigned char * graphicData;
 
-extern struct PPU ppu;
 
 /**
  * Loads the pointers to the program and
@@ -30,7 +34,7 @@ extern struct PPU ppu;
 void loadMMC1Ptrs(unsigned char * p, unsigned char * g) {
   programData = p;
   graphicData = g;
-  memcpy(pTable0, graphicData, 0x1000);
+  memcpy(pTable0, graphicData+0x0000, 0x1000);
   memcpy(nTable0.tbl, graphicData+0x2000, 0x3C0);
   memcpy(nTable0.attr, graphicData+0x23C0, 0x40);
 }
@@ -95,9 +99,10 @@ void mmc1Write(unsigned short addr, unsigned char val) {
  * Sets the mmc1 registers to their respective
  * power-on values.
  */
-void mmc1Powerup(void) {
+unsigned char MMC1Setup(void) {
   mmc1.mainControl = mmc1.mainControl | 0b00000100;
   mmc1Reset();
+  return 1;
 }
 
 

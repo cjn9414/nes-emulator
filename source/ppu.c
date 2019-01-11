@@ -1,5 +1,19 @@
 #include "ppu.h"
+
 #define KB 1024
+
+/**
+ * The PPU is idle for 63 PPU cycles (258-320).
+ * The previous 16 cycles (249-257) represents an unused tile fetch.
+ * The following 16 cycles (321-336) represents the first 
+ * two tiles for the next scanline.
+ * The remaining cycles (337-340) represent unused fetches.
+ * Effective h-blank time for developer purposes is 79 PPU cycles.
+ */
+#define H_BLANK 63
+// V-blank starts at scanline 241 (post-render line at 240).
+// Pre-render line at scanline 261.
+#define V_BLANK 20
 
 // Declares the two patten tables in PPU memory.
 unsigned char pTable0[0x1000];

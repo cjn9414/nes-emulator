@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "mappers.h"
 #include "main.h"
 #include "registers.h"
-#include "mmc1.h"
 #include "visualTest.h"
 
 #define KB 1024
@@ -64,6 +64,36 @@ signed char loadHeader(FILE *file, struct Header* head) {
   return 0;
 }
 
+
+/**
+ * Selects the memory mapper that the .nes file is using.
+ * Will call the proper function to setup the memory mapper.
+ */
+void mapperSetup(void) {
+  unsigned char success;
+  switch(head.mapperNumber) {
+    case 0:
+      success = NROMSetup();
+      break;
+    case 1:
+      success = MMC1Setup();
+      break;
+    case 2:
+      success = MMC2Setup();
+      break;
+    case 3:
+      success = MMC3Setup();
+      break;
+    default:
+      printf("Error: Mapper type not supported!.\n");
+      exit(1);
+  }
+  if (!success) {
+    printf("Error: Couldn't setup mapper number %u.\n", head.mapperNumber);
+  }
+}
+
+
 /**
  * This is the function that will be called when the
  * emulator program is run. This function is responsible for  
@@ -106,7 +136,7 @@ int main(int argc, char **argv) {
   unsigned char * programData = malloc(16*KB*head.n_prg_banks);
   unsigned char * graphicData = malloc(8*KB*head.n_chr_banks);
   unsigned char * trainer;
-
+  
   // If the trainer exists in the file, load it into the array.
   if (head.trainerBit) {
     trainer = malloc(512);
@@ -121,7 +151,8 @@ int main(int argc, char **argv) {
   fclose(file);
   
   // Load the on-power status of the memory mapper and the cpu registers.
-  mmc1Powerup();
+  
+  mapperSetup();
   registerPowerup(&regs);
   loadMMC1Ptrs(programData, graphicData);
 

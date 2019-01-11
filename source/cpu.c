@@ -23,6 +23,15 @@
 
 extern struct registers regs;
 
+//typedef unsigned char (*FunctionCallBack)(unsigned char);
+//FunctionCallBack opFunctions[] = { &foo, &bar };
+
+void cpuStep(void) {
+//  printf("%x\n", opFunctions[0](1));
+  return;
+}
+
+
 /**
  * Contains all information on CPU opcodes and addressing modes.
  * There are 56 unique opcodes and 13 different addressing modes,
@@ -293,7 +302,7 @@ const struct opcode opcodes[256] = {
 
 //const unsigned char cycles[256] = {
 //  7, 6, 0, 0, 0, 3, 5, 0, 3, 2, 2, 0, 0, 4, 6, 0
-//  
+//    
 //}
 
 
