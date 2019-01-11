@@ -105,7 +105,7 @@ const struct opcode opcodes[256] = {
   {"NAN", INVALID, 0},
   {"AND", ABSOLUTE_X, 3},
   {"ROL", ABSOLUTE_X, 3},
-  {"NAN", INVALID, 0x02, 0},  // 0x3F
+  {"NAN", INVALID, 0},  // 0x3F
   {"RTI", IMPLIED, 1},
   {"EOR", INDIRECT_X, 2},
   {"NAN", INVALID, 0},
@@ -300,11 +300,47 @@ const struct opcode opcodes[256] = {
   {"NAN", INVALID, 0}      // 0xFF
 };
 
-//const unsigned char cycles[256] = {
-//  7, 6, 0, 0, 0, 3, 5, 0, 3, 2, 2, 0, 0, 4, 6, 0
-//    
-//}
 
+/**
+ * OPCODES WITH ADDITIONAL CYCLE FOR PAGE BOUNDARY CROSSING
+ * $11, $19, $1D, $31, $39, $3D, $51, $59, $5D, $71, $79, $7D
+ * $B1, $B9, $BD, $D1, $D9, $DD, $F1, $F9, $FD 
+ * $BC, $BE
+ *
+ * OTHER OPCODES WITH ADDITIONAL CYCLES
+ * (May also have additional cycle for page boundary)
+ * $10, $30, $50, $70, $90, $B0, $D0, $F0
+ *
+ */
+
+const unsigned char cycles[256] = {
+  7, 6, 0, 0, 0, 3, 5, 0, 3, 2, 2, 0, 0, 4, 6, 0  // 0x0F
+  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0  // 0x1F
+  6, 6, 0, 0, 3, 3, 5, 0, 4, 2, 2, 0, 4, 4, 6, 0  // 0x2F
+  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0  // 0x3F
+  6, 6, 0, 0, 0, 3, 5, 0, 3, 2, 2, 0, 3, 4, 6, 0  // 0x4F
+  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0  // 0x5F
+  6, 6, 0, 0, 0, 3, 5, 0, 4, 2, 2, 0, 5, 4, 6, 0  // 0x6F
+  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0  // 0x7F
+  0, 6, 0, 0, 3, 3, 3, 0, 2, 0, 2, 0, 4, 4, 4, 0  // 0x8F
+  2, 6, 0, 0, 4, 4, 4, 0, 2, 5, 2, 0, 0, 5, 0, 0  // 0x9F
+  2, 6, 2, 0, 3, 3, 3, 0, 2, 2, 2, 0, 4, 4, 4, 0  // 0xAF
+  2, 5, 0, 0, 4, 4, 4, 0, 2, 4, 2, 0, 4, 4, 4, 0  // 0xBF
+  2, 6, 0, 0, 3, 3, 5, 0, 2, 2, 2, 0, 4, 4, 6, 0  // 0xCF
+  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0  // 0xDF
+  2, 6, 0, 0, 3, 3, 5, 0, 2, 2, 2, 0, 4, 4, 6, 0  // 0xEF
+  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0  // 0xFF
+};
+
+
+/**
+ * Reads the next instruction from the PRG-ROM
+ * and executes it. Increments the stack pointer to
+ * the next opcode instruction.
+ */
+//void step(void) {
+//  
+//}
 
 /**
  * The next set of functions will either set or clear a flag
