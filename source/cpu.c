@@ -22,15 +22,12 @@
 #define INVALID -1
 
 extern struct registers regs;
+extern unsigned char prg_rom_lower[0x4000];
+extern unsigned char prg_rom_upper[0x4000];
 
-//typedef unsigned char (*FunctionCallBack)(unsigned char);
+typedef void (*FunctionCallBack)(unsigned char);
+
 //FunctionCallBack opFunctions[] = { &foo, &bar };
-
-void cpuStep(void) {
-//  printf("%x\n", opFunctions[0](1));
-  return;
-}
-
 
 /**
  * Contains all information on CPU opcodes and addressing modes.
@@ -314,22 +311,22 @@ const struct opcode opcodes[256] = {
  */
 
 const unsigned char cycles[256] = {
-  7, 6, 0, 0, 0, 3, 5, 0, 3, 2, 2, 0, 0, 4, 6, 0  // 0x0F
-  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0  // 0x1F
-  6, 6, 0, 0, 3, 3, 5, 0, 4, 2, 2, 0, 4, 4, 6, 0  // 0x2F
-  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0  // 0x3F
-  6, 6, 0, 0, 0, 3, 5, 0, 3, 2, 2, 0, 3, 4, 6, 0  // 0x4F
-  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0  // 0x5F
-  6, 6, 0, 0, 0, 3, 5, 0, 4, 2, 2, 0, 5, 4, 6, 0  // 0x6F
-  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0  // 0x7F
-  0, 6, 0, 0, 3, 3, 3, 0, 2, 0, 2, 0, 4, 4, 4, 0  // 0x8F
-  2, 6, 0, 0, 4, 4, 4, 0, 2, 5, 2, 0, 0, 5, 0, 0  // 0x9F
-  2, 6, 2, 0, 3, 3, 3, 0, 2, 2, 2, 0, 4, 4, 4, 0  // 0xAF
-  2, 5, 0, 0, 4, 4, 4, 0, 2, 4, 2, 0, 4, 4, 4, 0  // 0xBF
-  2, 6, 0, 0, 3, 3, 5, 0, 2, 2, 2, 0, 4, 4, 6, 0  // 0xCF
-  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0  // 0xDF
-  2, 6, 0, 0, 3, 3, 5, 0, 2, 2, 2, 0, 4, 4, 6, 0  // 0xEF
-  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0  // 0xFF
+  7, 6, 0, 0, 0, 3, 5, 0, 3, 2, 2, 0, 0, 4, 6, 0,  // 0x0F
+  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,  // 0x1F
+  6, 6, 0, 0, 3, 3, 5, 0, 4, 2, 2, 0, 4, 4, 6, 0,  // 0x2F
+  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,  // 0x3F
+  6, 6, 0, 0, 0, 3, 5, 0, 3, 2, 2, 0, 3, 4, 6, 0,  // 0x4F
+  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,  // 0x5F
+  6, 6, 0, 0, 0, 3, 5, 0, 4, 2, 2, 0, 5, 4, 6, 0,  // 0x6F
+  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,  // 0x7F
+  0, 6, 0, 0, 3, 3, 3, 0, 2, 0, 2, 0, 4, 4, 4, 0,  // 0x8F
+  2, 6, 0, 0, 4, 4, 4, 0, 2, 5, 2, 0, 0, 5, 0, 0,  // 0x9F
+  2, 6, 2, 0, 3, 3, 3, 0, 2, 2, 2, 0, 4, 4, 4, 0,  // 0xAF
+  2, 5, 0, 0, 4, 4, 4, 0, 2, 4, 2, 0, 4, 4, 4, 0,  // 0xBF
+  2, 6, 0, 0, 3, 3, 5, 0, 2, 2, 2, 0, 4, 4, 6, 0,  // 0xCF
+  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,  // 0xDF
+  2, 6, 0, 0, 3, 3, 5, 0, 2, 2, 2, 0, 4, 4, 6, 0,  // 0xEF
+  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0   // 0xFF
 };
 
 
@@ -338,9 +335,12 @@ const unsigned char cycles[256] = {
  * and executes it. Increments the stack pointer to
  * the next opcode instruction.
  */
-//void step(void) {
-//  
-//}
+void step(void) {
+  unsigned char opcode = regs.pc > 0x3FFF ? prg_rom_lower[regs.pc] : prg_rom_upper[regs.pc- 0x4000];
+  unsigned char time = cycles[opcode];
+  regs.pc += opcodes[opcode].operands;
+
+}
 
 /**
  * The next set of functions will either set or clear a flag
@@ -459,130 +459,158 @@ void branchJump(unsigned char val) {
 /* START OF OPCODE FUNCTIONS*/
 /****************************/
 
-void brk(void) { setFlagBreak(1); }  //0x00
+void brk(unsigned char garb0, unsigned char garb1) { setFlagBreak(1); }  //0x00
 
-
-void adc2(unsigned char val, unsigned char mode) {
-  unsigned char res;
-  unsigned short addr;
-  switch (mode) {
-    case IMMEDIATE:
-      val = val + getFlagCarry();
-    case ZERO_PAGE:
-      val = readZeroPage(val) + getFlagCarry();
-    case ZERO_PAGE_X:
-      val = readZeroPage(regs.x + val) + getFlagCarry();  
-    case INDIRECT_X:
-      addr = readZeroPage(val + regs.x) + (readZeroPage(val + regs.x + 1) << 8);
-      val = readByte(addr) + getFlagCarry();
-    case INDIRECT_Y:
-      addr = readZeroPage(val) + (readZeroPage(val + 1) << 8);
-      val = readByte(addr + regs.y) + getFlagCarry();
-    default:
-      printf("Unexpected mode at sbc2\n");
-      exit(1);
-  }
+void adc_imm(unsigned char val, unsigned char res) {
+  val += getFlagCarry();
   res = val + regs.a;
   VFlag(val, regs.a, res);
   res > regs.a ? setFlagCarry(1) : setFlagCarry(0);
   regs.a = res;
-  SZFlag(regs.a);
+  SZFlags(regs.a);
 }
 
-void adc3(unsigned char lower, unsigned char upper, unsigned char mode) {
+void adc_zp(unsigned char val, unsigned char res) {
+  val = readZeroPage(val) + getFlagCarry();
+  res = val + regs.a;
+  VFlag(val, regs.a, res);
+  res > regs.a ? setFlagCarry(1) : setFlagCarry(0);
+  regs.a = res;
+  SZFlags(regs.a);
+}
+
+void adc_zp_x(unsigned char val, unsigned char res) {
+  val = readZeroPage(val + regs.x) + getFlagCarry();
+  res = val + regs.a;
+  VFlag(val, regs.a, res);
+  res > regs.a ? setFlagCarry(1) : setFlagCarry(0);
+  regs.a = res;
+  SZFlags(regs.a);
+}
+
+void adc_ind_x(unsigned char val, unsigned char res) {
+  unsigned short addr = readZeroPage(val + regs.x) + (readZeroPage(val + regs.x + 1) << 8);
+  val = readByte(addr) + getFlagCarry();
+  res = val + regs.a;
+  VFlag(val, regs.a, res);
+  res > regs.a ? setFlagCarry(1) : setFlagCarry(0);
+  regs.a = res;
+  SZFlags(regs.a);
+}
+
+void adc_ind_y(unsigned char val, unsigned char res) {
+  unsigned short addr = readZeroPage(val) + (readZeroPage(val + 1) << 8);
+  val = readByte(addr + regs.y) + getFlagCarry();
+  res = val + regs.a;
+  VFlag(val, regs.a, res);
+  res > regs.a ? setFlagCarry(1) : setFlagCarry(0);
+  regs.a = res;
+  SZFlags(regs.a);
+}
+
+void adc_abs(unsigned char lower, unsigned char upper) {
   unsigned char res;
-  unsigned short addr;
-  switch (mode) {
-    case ABSOLUTE:
-      addr = (upper << 8) + lower;
-      lower = readByte(addr) + getFlagCarry();
-    case ABSOLUTE_X:
-      addr = (upper << 8) + lower + regs.x;
-      lower = readByte(addr) + getFlagCarry();
-    case ABSOLUTE_Y:
-      addr = (upper << 8) + lower + regs.y;
-      lower = readByte(addr) + getFlagCarry();
-    default:
-      printf("Unexpected mode at sbc3\n");
-      exit(1);
-  }
+  unsigned short addr = (upper << 8) + lower;
+  lower = readByte(addr) + getFlagCarry();
   res = lower + regs.a;
   VFlag(lower, regs.a, res);
   res > regs.a ? setFlagCarry(1) : setFlagCarry(0);
   regs.a = res;
-  SZFlag(regs.a);
+  SZFlags(regs.a); 
 }
 
-unsigned char and_ind_x(unsigned char val) {
+void adc_abs_x(unsigned char lower, unsigned char upper) {
+  unsigned char res;
+  unsigned short addr = (upper << 8) + lower + regs.x;
+  lower = readByte(addr) + getFlagCarry();
+  res = lower + regs.a;
+  VFlag(lower, regs.a, res);
+  res > regs.a ? setFlagCarry(1) : setFlagCarry(0);
+  regs.a = res;
+  SZFlags(regs.a); 
+}
+
+void adc_abs_y(unsigned char lower, unsigned char upper) {
+  unsigned char res;
+  unsigned short addr = (upper << 8) + lower + regs.y;
+  lower = readByte(addr) + getFlagCarry();
+  res = lower + regs.a;
+  VFlag(lower, regs.a, res);
+  res > regs.a ? setFlagCarry(1) : setFlagCarry(0);
+  regs.a = res;
+  SZFlags(regs.a); 
+}
+
+void and_ind_x(unsigned char val, unsigned char garb) {
   unsigned short addr = (readZeroPage(regs.x + val + 1) << 8) + readZeroPage(regs.x + val); 
   val = regs.a & readByte(addr);
   SZFlags(val);
-  return val;
+  regs.a = val;
 };
 
-unsigned char and_ind_y(unsigned char val) {
+void and_ind_y(unsigned char val, unsigned char garb) {
   unsigned short addr = (readZeroPage(val + 1) << 8) + readZeroPage(val); 
   val = regs.a & readByte(addr + regs.y);
   SZFlags(val);
-  return val;
+  regs.a = val;
 }
 
-unsigned char and_imm(unsigned char val) {   //0x09
+void and_imm(unsigned char val, unsigned char garb) {   //0x09
   val = regs.a & val;
   SZFlags(val);
-  return val;
+  regs.a = val;
 }
 
-unsigned char and_zp(unsigned char val) {  //0x05
+void and_zp(unsigned char val, unsigned char garb) {  //0x05
   val = readZeroPage(val) & regs.a;
   SZFlags(val);
-  return val;
+  regs.a = val;
 }
 
-unsigned char and_zp_x(unsigned char val) {  // 0x15
+void and_zp_x(unsigned char val, unsigned char garb) {  // 0x15
   val = readZeroPage(val+regs.x) & regs.a;
   SZFlags(val);
-  return val;
+  regs.a = val;
 }
 
-unsigned char and_abs(unsigned char lower, unsigned char upper) {  
+void and_abs(unsigned char lower, unsigned char upper) {  
   unsigned char addr = (upper << 8) + lower;
   lower = readByte(addr) & regs.a;
   SZFlags(lower);
-  return lower;
+  regs.a = lower;
 }
 
-unsigned char and_abs_x(unsigned char lower, unsigned char upper) {
+void and_abs_x(unsigned char lower, unsigned char upper) {
   unsigned char addr = (upper << 8) + lower + regs.x;
   lower = readByte(addr) & regs.a;
   SZFlags(lower);
-  return lower;
+  regs.a = lower;
 }
 
-unsigned char and_abs_y(unsigned char lower, unsigned char upper) {
+void and_abs_y(unsigned char lower, unsigned char upper) {
   unsigned char addr = (upper << 8) + lower + regs.y;
   lower = readByte(addr) & regs.a;
   SZFlags(lower);
-  return lower;
+  regs.a = lower;
 }
 
-void asl_acc(void) { 
+void asl_acc(unsigned char garb0, unsigned char garb1) { 
   setFlagCarry(getBit(regs.a, 7));
   regs.a = regs.a << 1;
   SZFlags(regs.a);
 }
 
-void asl_zp(unsigned char addr) {
-  unsigned char val = readZeroPage(addr);
+void asl_zp(unsigned char addr, unsigned char val) {
+  val = readZeroPage(addr);
   setFlagCarry(getBit(val, 7));
   val = val << 1;
   writeZeroPage(addr, val); 
   SZFlags(val);
 }
 
-void asl_zp_x(unsigned char addr) {
+void asl_zp_x(unsigned char addr, unsigned char val) {
   addr += regs.x;
-  unsigned char val = readZeroPage(addr);
+  val = readZeroPage(addr);
   setFlagCarry(getBit(val, 7));
   val = val << 1;
   writeZeroPage(addr, val);
@@ -605,7 +633,7 @@ void asl_abs_x(unsigned char lower, unsigned char upper) {
   writeByte(addr, lower);
 }
 
-void bit_zp(unsigned char val) {
+void bit_zp(unsigned char val, unsigned char garb) {
   val = readZeroPage(val);
   setFlagNegative(getBit(val, 7));
   setFlagOverflow(getBit(val, 6));
@@ -620,73 +648,55 @@ void bit_abs(unsigned char lower, unsigned char upper) {
   setFlagZero(lower & regs.a);
 }
 
-void bpl(unsigned char val) {  
+void bpl(unsigned char val, unsigned char garb) {  
   if (!getFlagNegative()) {
     branchJump(val);
   }
 }
 
-void bmi(unsigned char val) {  
+void bmi(unsigned char val, unsigned char garb) {  
   if (getFlagNegative()) {
     branchJump(val);
   }
 }
 
-void bvc(unsigned char val) {  
+void bvc(unsigned char val, unsigned char garb) {  
   if (!getFlagOverflow()) {
     branchJump(val);
   }
 }
 
-void bvs(unsigned char val) {  
+void bvs(unsigned char val, unsigned char garb) {  
   if (getFlagOverflow()) {
     branchJump(val);
   }
 }
 
-void bcc(unsigned char val) {  
+void bcc(unsigned char val, unsigned char garb) {  
   if (!getFlagCarry()) {
     branchJump(val);
   }
 }
 
-void bcs(unsigned char val) {  
+void bcs(unsigned char val, unsigned char garb) {  
   if (getFlagCarry()) {
     branchJump(val);
   }
 }
 
-void bne(unsigned char val) {  
+void bne(unsigned char val, unsigned char garb) {  
   if (!getFlagZero()) {
     branchJump(val);
   }
 }
 
-void beq(unsigned char val) {  
+void beq(unsigned char val, unsigned char garb) {  
   if (getFlagZero()) {
     branchJump(val);
   }
 }
 
-void cmp2(unsigned char val, unsigned char mode) {
-  unsigned short addr;
-  switch(mode) {
-    case IMMEDIATE:
-      val = val;
-    case ZERO_PAGE:
-      val = readZeroPage(val);
-    case ZERO_PAGE_X:
-      val = readZeroPage(val + regs.x);
-    case INDIRECT_X:
-      addr = (readZeroPage(val + regs.x + 1) << 8) + readZeroPage(val + regs.x);
-      val = readByte(addr);
-    case INDIRECT_Y:
-      addr = (readZeroPage(val + 1) << 8) + readZeroPage(val);
-      val = readByte(addr + regs.y);
-    default:
-      printf("Unexpected mode at cmp2.\n");
-      exit(1);
-  }
+void cmp_imm(unsigned char val, unsigned char garb) {
   if (regs.a > val) {
     setFlagCarry(1);
   } else if (regs.a == val) {
@@ -694,22 +704,49 @@ void cmp2(unsigned char val, unsigned char mode) {
   } else setFlagNegative(1);
 }
 
-void cmp3(unsigned char lower, unsigned char upper, unsigned char mode) {
+void cmp_zp(unsigned char val, unsigned char garb) {
+  val = readZeroPage(val);
+  if (regs.a > val) {
+    setFlagCarry(1);
+  } else if (regs.a == val) {
+    setFlagZero(1);
+  } else setFlagNegative(1);
+}
+
+void cmp_zp_x(unsigned char val, unsigned char garb) {
+  val = readZeroPage(val + regs.x);
+  if (regs.a > val) {
+    setFlagCarry(1);
+  } else if (regs.a == val) {
+    setFlagZero(1);
+  } else setFlagNegative(1);
+}
+
+void cmp_ind_x(unsigned char val, unsigned char garb) {
   unsigned short addr;
-  switch(mode) {
-    case ABSOLUTE:
-      addr = (upper << 8) + lower;
-      lower = readByte(addr);
-    case ABSOLUTE_X:
-      addr = (upper << 8) + lower + regs.x;
-      lower = readByte(addr);
-    case ABSOLUTE_Y:
-      addr = (upper << 8) + lower + regs.y;
-      lower = readByte(addr);
-    default:
-      printf("Unexpected mode at cmp3.\n");
-      exit(1);
-  }
+  addr = (readZeroPage(val + regs.x + 1) << 8) + readZeroPage(val + regs.x);
+  val = readByte(addr);
+  if (regs.a > val) {
+    setFlagCarry(1);
+  } else if (regs.a == val) {
+    setFlagZero(1);
+  } else setFlagNegative(1);
+}
+
+void cmp_ind_y(unsigned char val, unsigned char garb) {
+  unsigned short addr;
+  addr = (readZeroPage(val + 1) << 8) + readZeroPage(val);
+  val = readByte(addr + regs.y);
+  if (regs.a > val) {
+    setFlagCarry(1);
+  } else if (regs.a == val) {
+    setFlagZero(1);
+  } else setFlagNegative(1);
+}
+
+void cmp_abs(unsigned char lower, unsigned char upper) {
+  unsigned short addr = (upper << 8) + lower;
+  lower = readByte(addr);
   if (regs.a > lower) {
     setFlagCarry(1);
   } else if (regs.a == lower) {
@@ -717,16 +754,27 @@ void cmp3(unsigned char lower, unsigned char upper, unsigned char mode) {
   } else setFlagNegative(1);
 }
 
-void cpx2(unsigned char val, unsigned char mode) {
-  switch(mode) {
-    case IMMEDIATE:
-      val = val;
-    case ZERO_PAGE:
-      val = readZeroPage(val);
-    default:
-      printf("Unexpected mode at cpx2.\n");
-      exit(1);
-  }
+void cmp_abs_x(unsigned char lower, unsigned char upper) {
+  unsigned short addr = (upper << 8) + lower + regs.x;
+  lower = readByte(addr);
+  if (regs.a > lower) {
+    setFlagCarry(1);
+  } else if (regs.a == lower) {
+    setFlagZero(1);
+  } else setFlagNegative(1);
+}
+
+void cmp_abs_y(unsigned char lower, unsigned char upper) {
+  unsigned short addr = (upper << 8) + lower + regs.y;
+  lower = readByte(addr);
+  if (regs.a > lower) {
+    setFlagCarry(1);
+  } else if (regs.a == lower) {
+    setFlagZero(1);
+  } else setFlagNegative(1);
+}
+
+void cpx_imm(unsigned char val, unsigned char garb) {
   if (regs.x > val) {
     setFlagCarry(1);
   } else if (regs.x == val) {
@@ -734,16 +782,18 @@ void cpx2(unsigned char val, unsigned char mode) {
   } else setFlagNegative(1);
 }
 
-void cpx3(unsigned char lower, unsigned char upper, unsigned char mode) {
-  unsigned short addr;
-  switch(mode) {
-    case ABSOLUTE:
-      addr = (upper << 8) + lower;
-      lower = readByte(addr);
-    default:
-      printf("Unexpected mode at cpx3.\n");
-      exit(1);
-  }
+void cpx_zp(unsigned char val, unsigned char garb) {
+  val = readZeroPage(val);
+  if (regs.x > val) {
+    setFlagCarry(1);
+  } else if (regs.x == val) {
+    setFlagZero(1);
+  } else setFlagNegative(1);
+}
+
+void cpx_abs(unsigned char lower, unsigned char upper) {
+  unsigned char addr = (upper << 8) + lower;
+  lower = readByte(addr);
   if (regs.x > lower) {
     setFlagCarry(1);
   } else if (regs.x == lower) {
@@ -751,16 +801,7 @@ void cpx3(unsigned char lower, unsigned char upper, unsigned char mode) {
   } else setFlagNegative(1);
 }
 
-void cpy2(unsigned char val, unsigned char mode) {
-  switch(mode) {
-    case IMMEDIATE:
-      val = val;
-    case ZERO_PAGE:
-      val = readZeroPage(val);
-    default:
-      printf("Unexpected mode at cpy2.\n");
-      exit(1);
-  }
+void cpy_imm(unsigned char val, unsigned char garb) {
   if (regs.y > val) {
     setFlagCarry(1);
   } else if (regs.y == val) {
@@ -768,16 +809,18 @@ void cpy2(unsigned char val, unsigned char mode) {
   } else setFlagNegative(1);
 }
 
-void cpy3(unsigned char lower, unsigned char upper, unsigned char mode) {
-  unsigned short addr;
-  switch(mode) {
-    case ABSOLUTE:
-      addr = (upper << 8) + lower;
-      lower = readByte(addr);
-    default:
-      printf("Unexpected mode at cpy3.\n");
-      exit(1);
-  }
+void cpy_zp(unsigned char val, unsigned char garb) {
+  val = readZeroPage(val);
+  if (regs.y > val) {
+    setFlagCarry(1);
+  } else if (regs.y == val) {
+    setFlagZero(1);
+  } else setFlagNegative(1);
+}
+
+void cpy_abs(unsigned char lower, unsigned char upper) {
+  unsigned char addr = (upper << 8) + lower;
+  lower = readByte(addr);
   if (regs.y > lower) {
     setFlagCarry(1);
   } else if (regs.y == lower) {
@@ -785,12 +828,14 @@ void cpy3(unsigned char lower, unsigned char upper, unsigned char mode) {
   } else setFlagNegative(1);
 }
 
-void dec_zp(unsigned char addr) {
+
+
+void dec_zp(unsigned char addr, unsigned char garb) {
   regs.pc -= readZeroPage(addr);
   SZFlags(regs.pc);
 }
 
-void dec_zp_x(unsigned char addr) {
+void dec_zp_x(unsigned char addr, unsigned char garb) {
   regs.pc -= readZeroPage(regs.x + addr);
   SZFlags(regs.pc);
 }
@@ -807,67 +852,72 @@ void dec_abs_x(unsigned char lower, unsigned char upper) {
   SZFlags(regs.pc);
 }
 
-void eor2(unsigned char val, unsigned char mode) {
-  unsigned short addr;
-  switch (mode) {
-    case IMMEDIATE:
-      regs.a = regs.a ^ val;
-    case ZERO_PAGE:
-      regs.a = regs.a ^ readZeroPage(val);
-    case ZERO_PAGE_X:
-      regs.a = regs.a ^ readZeroPage(val + regs.x);
-    case INDIRECT_X:
-      addr = (readZeroPage(val + regs.x + 1) << 8) + readZeroPage(val + regs.x);
-      regs.a = regs.a ^ readByte(addr);
-    case INDIRECT_Y:
-      addr = (readZeroPage(val + 1) << 8) + readZeroPage(val);
-      regs.a = regs.a ^ readByte(addr + regs.y);
-    default:
-      printf("Unexpected mode at eor2\n");
-      exit(1);
-  }
+void eor_imm(unsigned char val, unsigned char garb) {
+  regs.a = regs.a ^ val;
   SZFlags(regs.a);
 }
 
-void eor3(unsigned char lower, unsigned char upper, unsigned char mode) {
-  unsigned short addr;
-  switch (mode) {
-    case ABSOLUTE:
-      addr = (upper << 8) + lower;
-      regs.a = regs.a ^ readByte(addr);
-    case ABSOLUTE_X:
-      addr = (upper << 8) + lower + regs.x;
-      regs.a = regs.a ^ readByte(addr);
-    case ABSOLUTE_Y:
-      addr = (upper << 8) + lower + regs.y;
-      regs.a = regs.a ^ readByte(addr);
-    default:
-      printf("Unexpected mode at eor3\n");
-      exit(1);
-  }
+void eor_zp(unsigned char val, unsigned char garb) {
+  regs.a = regs.a ^ readZeroPage(val);
   SZFlags(regs.a);
 }
 
-void clc(void) { setFlagCarry(0); }
+void eor_zp_x(unsigned char val, unsigned char garb) {
+  regs.a = regs.a ^ readZeroPage(val + regs.x);
+  SZFlags(regs.a);
+}
 
-void sec(void) { setFlagCarry(1); }
+void eor_ind_x(unsigned char val, unsigned char garb) {
+  unsigned short addr;
+  addr = (readZeroPage(val + regs.x + 1) << 8) + readZeroPage(val + regs.x);
+  regs.a = regs.a ^ readByte(addr);
+  SZFlags(regs.a);
+}
 
-void cli(void) { setFlagInterrupt(0); }
+void eor_ind_y(unsigned char val, unsigned char garb) {
+  unsigned short addr = (readZeroPage(val + 1) << 8) + readZeroPage(val);
+  regs.a = regs.a ^ readByte(addr + regs.y);
+  SZFlags(regs.a);
+}
 
-void sei(void) { setFlagInterrupt(1); }
+void eor_abs(unsigned char lower, unsigned char upper) {
+  unsigned short addr = (upper << 8) + lower;
+  regs.a = regs.a ^ readByte(addr);
+  SZFlags(regs.a);
+}
 
-void clv(void) { setFlagOverflow(0); }
+void eor_abs_x(unsigned char lower, unsigned char upper) {
+  unsigned short addr = (upper << 8) + lower + regs.x;
+  regs.a = regs.a ^ readByte(addr);
+  SZFlags(regs.a);
+}
 
-void cld(void) { return; }
+void eor_abs_y(unsigned char lower, unsigned char upper) {
+  unsigned short addr = (upper << 8) + lower + regs.y;
+  regs.a = regs.a ^ readByte(addr);
+  SZFlags(regs.a);
+}
 
-void sed(void) { return; }
+void clc(unsigned char garb0, unsigned char garb1) { setFlagCarry(0); }
 
-void inc_zp(unsigned char addr) {
+void sec(unsigned char garb0, unsigned char garb1) { setFlagCarry(1); }
+
+void cli(unsigned char garb0, unsigned char garb1) { setFlagInterrupt(0); }
+
+void sei(unsigned char garb0, unsigned char garb1) { setFlagInterrupt(1); }
+
+void clv(unsigned char garb0, unsigned char garb1) { setFlagOverflow(0); }
+
+void cld(unsigned char garb0, unsigned char garb1) { return; }
+
+void sed(unsigned char garb0, unsigned char garb1) { return; }
+
+void inc_zp(unsigned char addr, unsigned char garb) {
   regs.pc += readZeroPage(addr);
   SZFlags(regs.pc);
 }
 
-void inc_zp_x(unsigned char addr) {
+void inc_zp_x(unsigned char addr, unsigned char garb) {
   regs.pc += readZeroPage(regs.x + addr);
   SZFlags(regs.pc);
 }
@@ -889,7 +939,7 @@ void jmp_abs(unsigned char lower, unsigned char upper) {
   regs.pc = readByte(addr);
 }
 
-void jmp_ind(unsigned char val) {
+void jmp_ind(unsigned char val, unsigned char garb) {
   unsigned short addr = (readZeroPage(val+1) << 8) + readZeroPage(val);
   regs.pc = readByte(addr);
 }
@@ -899,76 +949,69 @@ void jsr(unsigned char lower, unsigned char upper) {
   pushStack(toStack);
 }
 
-void ldx2(unsigned char addr, unsigned char mode) {
-  switch(mode) {
-    case IMMEDIATE:
-      regs.x = addr;
-    case ZERO_PAGE:
-      regs.x = readZeroPage(addr);
-    case ZERO_PAGE_Y:
-      regs.x = readZeroPage(addr + regs.y);
-    default:
-      printf("Unexpected mode at ldx2\n");
-      exit(1);
-    SZFlags(regs.x);
-  }
+void ldx_imm(unsigned char addr, unsigned char garb) {
+  regs.x = addr;
+  SZFlags(regs.x);
 }
 
-void ldx3(unsigned char lower, unsigned char upper, unsigned char mode) {
-  unsigned short addr;
-  switch(mode) {
-    case ABSOLUTE:
-      addr = (upper << 8) + lower;
-      regs.x = readByte(addr);
-    case ABSOLUTE_Y:
-      addr = (upper << 8) + lower + regs.y;
-      regs.x = readByte(addr);
-    default:
-      printf("Unexpected mode at ldy3\n");
-      exit(1);
-  }
+void ldx_zp(unsigned char addr, unsigned char garb) {
+  regs.x = readZeroPage(addr);
+  SZFlags(regs.x);
+}
+
+void ldx_zp_y(unsigned char addr, unsigned char garb) {
+  regs.x = readZeroPage(addr + regs.y);
+  SZFlags(regs.x);
+}
+
+void ldx_abs(unsigned char lower, unsigned char upper) {
+  unsigned short addr = (upper << 8) + lower;
+  regs.x = readByte(addr);
+  SZFlags(regs.x);
+}
+
+void ldx_abs_y(unsigned char lower, unsigned char upper) {
+  unsigned short addr = (upper << 8) + lower + regs.y;
+  regs.x = readByte(addr);
   SZFlags(regs.x);
 }
 
 
-void ldy2(unsigned char addr, unsigned char mode) {
-  switch(mode) {
-    case IMMEDIATE:
-      regs.y = addr;
-    case ZERO_PAGE:
-      regs.y = readZeroPage(addr);
-    case ZERO_PAGE_X:
-      regs.y = readZeroPage(addr + regs.x);
-    default:
-      printf("Unexpected mode at ldy2\n");
-      exit(1);
-    SZFlags(regs.y);
-  }
-}
 
-void ldy3(unsigned char lower, unsigned char upper, unsigned char mode) {
-  unsigned short addr;
-  switch(mode) {
-    case ABSOLUTE:
-      addr = (upper << 8) + lower;
-      regs.y = readByte(addr);
-    case ABSOLUTE_X:
-      addr = (upper << 8) + lower + regs.x;
-      regs.y = readByte(addr);
-    default:
-      printf("Unexpected mode at ldy3\n");
-      exit(1);
-  }
+void ldy_imm(unsigned char addr, unsigned char garb) {
+  regs.y = addr;
   SZFlags(regs.y);
 }
 
-void lsr_acc(void) { 
+void ldy_zp(unsigned char addr, unsigned char garb) {
+  regs.y = readZeroPage(addr);
+  SZFlags(regs.y);
+}
+
+void ldy_zp_x(unsigned char addr, unsigned char garb) {
+  regs.y = readZeroPage(addr + regs.x);
+  SZFlags(regs.y);
+}
+
+void ldy_abs(unsigned char lower, unsigned char upper) {
+  unsigned short addr = (upper << 8) + lower;
+  regs.y = readByte(addr);
+  SZFlags(regs.y);
+}
+
+void ldy_abs_x(unsigned char lower, unsigned char upper) {
+  unsigned short addr = (upper << 8) + lower + regs.x;
+  regs.y = readByte(addr);
+  SZFlags(regs.y);
+}
+
+void lsr_acc(unsigned char garb0, unsigned char garb1) { 
   setFlagCarry(getBit(regs.a, 0));
   regs.a = regs.a >> 1;
   SZFlags(regs.a);
 }
 
-void lsr_zp(unsigned char addr) {
+void lsr_zp(unsigned char addr, unsigned char garb) {
   unsigned char val = readZeroPage(addr);
   setFlagCarry(getBit(val, 0));
   val = val >> 1;
@@ -976,7 +1019,7 @@ void lsr_zp(unsigned char addr) {
   SZFlags(val);
 }
 
-void lsr_zp_x(unsigned char addr) {
+void lsr_zp_x(unsigned char addr, unsigned char garb) {
   unsigned char val = readZeroPage(addr+regs.x);
   setFlagCarry(getBit(val, 0));
   val = val >> 1;
@@ -1000,113 +1043,113 @@ void lsr_abs_x(unsigned char lower, unsigned char upper) {
   writeByte(addr, lower);
 }
 
-void nop(void) { return; }
+void nop(unsigned char garb0, unsigned char garb1) { return; }
 
-unsigned char ora_ind_x(unsigned char val) {
+void ora_ind_x(unsigned char val, unsigned char garb) {
   unsigned short addr = (readZeroPage(regs.x + val + 1) << 8) + readZeroPage(regs.x + val); 
   val = regs.a | readByte(addr);
   SZFlags(val);
-  return val;
+  regs.a = val;
 };
 
-unsigned char ora_ind_y(unsigned char val) {
+void ora_ind_y(unsigned char val, unsigned char garb) {
   unsigned short addr = (readZeroPage(val + 1) << 8) + readZeroPage(val); 
   val = regs.a | readByte(addr + regs.y);
   SZFlags(val);
-  return val;
+  regs.a = val;
 }
 
-unsigned char ora_imm(unsigned char val) {   //0x09
+void ora_imm(unsigned char val, unsigned char garb) {   //0x09
   val = regs.a | val;
   SZFlags(val);
-  return val;
+  regs.a = val;
 }
 
-unsigned char ora_zp(unsigned char val) {  //0x05
+void ora_zp(unsigned char val, unsigned char garb) {  //0x05
   val = readZeroPage(val) | regs.a;
   SZFlags(val);
-  return val;
+  regs.a = val;
 }
 
-unsigned char ora_zp_x(unsigned char val) {  // 0x15
+void ora_zp_x(unsigned char val, unsigned char garb) {  // 0x15
   val = readZeroPage(val+regs.x) | regs.a;
   SZFlags(val);
-  return val;
+  regs.a = val;
 }
 
-unsigned char ora_abs(unsigned char lower, unsigned char upper) {  
+void ora_abs(unsigned char lower, unsigned char upper) {  
   unsigned char addr = (upper << 8) + lower;
   lower = readByte(addr) | regs.a;
   SZFlags(lower);
-  return lower;
+  regs.a = lower;
 }
 
-unsigned char ora_abs_x(unsigned char lower, unsigned char upper) {
+void ora_abs_x(unsigned char lower, unsigned char upper) {
   unsigned char addr = (upper << 8) + lower + regs.x;
   lower = readByte(addr) | regs.a;
   SZFlags(lower);
-  return lower;
+  regs.a = lower;
 }
 
-unsigned char ora_abs_y(unsigned char lower, unsigned char upper) {
+void ora_abs_y(unsigned char lower, unsigned char upper) {
   unsigned char addr = (upper << 8) + lower + regs.y;
   lower = readByte(addr) | regs.a;
   SZFlags(lower);
-  return lower;
+  regs.a = lower;
 }
 
-void tax(void) {
+void tax(unsigned char garb0, unsigned char garb1) {
   regs.x = regs.a;
   SZFlags(regs.x);  
 }
 
-void txa(void) {
+void txa(unsigned char garb0, unsigned char garb1) {
   regs.a = regs.x;
   SZFlags(regs.a);
 }
 
-void dex(void) {
+void dex(unsigned char garb0, unsigned char garb1) {
   regs.x--;
   !~regs.x ? setFlagCarry(1) : setFlagCarry(0);
   SZFlags(regs.x);
 }
 
-void inx(void) {
+void inx(unsigned char garb0, unsigned char garb1) {
   regs.x++;
   !regs.x ? setFlagCarry(1) : setFlagCarry(0);
   SZFlags(regs.x);
 }
 
-void tay(void) {
+void tay(unsigned char garb0, unsigned char garb1) {
   regs.y = regs.a;
   SZFlags(regs.y);
 }
 
-void tya(void) { 
+void tya(unsigned char garb0, unsigned char garb1) { 
   regs.a = regs.y;
   SZFlags(regs.a);
 }
 
-void dey(void) { 
+void dey(unsigned char garb0, unsigned char garb1) { 
   regs.y--;
   !~regs.y ? setFlagCarry(1) : setFlagCarry(0);
   SZFlags(regs.y);
 }
 
-void iny(void) { 
+void iny(unsigned char garb0, unsigned char garb1) { 
   regs.y++;
   !regs.y ? setFlagCarry(1) : setFlagCarry(0);
   SZFlags(regs.y);
 }
 
-void rol_acc(void) { 
+void rol_acc(unsigned char garb0, unsigned char garb1) { 
   unsigned char msb = getFlagCarry();
   setFlagCarry(regs.a >> 7);
   regs.a = msb | (regs.a << 1);
   SZFlags(regs.a);
 }
 
-void rol_zp(unsigned char addr) {
+void rol_zp(unsigned char addr, unsigned char garb) {
   unsigned char msb = getFlagCarry();
   unsigned char val = readZeroPage(addr);
   setFlagCarry(val >> 7);
@@ -1115,7 +1158,7 @@ void rol_zp(unsigned char addr) {
   SZFlags(val);
 }
 
-void rol_zp_x(unsigned char addr) {
+void rol_zp_x(unsigned char addr, unsigned char garb) {
   unsigned char msb = getFlagCarry();
   addr = regs.x + addr;
   unsigned char val = readZeroPage(addr);
@@ -1145,14 +1188,14 @@ void rol_abs_x(unsigned char lower, unsigned char upper) {
   SZFlags(lower);
 }
 
-void ror_acc(void) { 
+void ror_acc(unsigned char garb0, unsigned char garb1) { 
   unsigned char msb = getFlagCarry() << 7;
   setFlagCarry(regs.a << 7);
   regs.a = msb | (regs.a >> 1);
   SZFlags(regs.a);
 }
 
-void ror_zp(unsigned char addr) {
+void ror_zp(unsigned char addr, unsigned char garb) {
   unsigned char msb = getFlagCarry() << 7;
   unsigned char val = readZeroPage(addr);
   setFlagCarry(val << 7);
@@ -1161,7 +1204,7 @@ void ror_zp(unsigned char addr) {
   SZFlags(val);
 }
 
-void ror_zp_x(unsigned char addr) {
+void ror_zp_x(unsigned char addr, unsigned char garb) {
   unsigned char msb = getFlagCarry() << 7;
   addr = regs.x + addr;
   unsigned char val = readZeroPage(addr);
@@ -1191,128 +1234,162 @@ void ror_abs_x(unsigned char lower, unsigned char upper) {
   SZFlags(lower);
 }
 
-void rti() { // check how pc pushed onto stack
+void rti(unsigned char garb0, unsigned char garb1) {
   regs.p = popStack();
   regs.pc = (unsigned short) popStack();
   regs.pc = (regs.pc << 8) + (unsigned short) popStack();
 }
 
-void rts() {
+void rts(unsigned char garb0, unsigned char garb1) {
   unsigned short addr = (unsigned short) popStack();
   addr += ((unsigned short) popStack()) << 8;
-  return addr + 1;
+  regs.pc = addr + 1;
 }
 
-void sbc2(unsigned char val, unsigned char mode) {
-  unsigned char res;
-  unsigned short addr;
-  switch (mode) {
-    case IMMEDIATE:
-      val = ~val + 1 + getFlagCarry();
-    case ZERO_PAGE:
-      val = ~readZeroPage(val) + 1 + getFlagCarry();
-    case ZERO_PAGE_X:
-      val = ~readZeroPage(regs.x + val) + 1 + getFlagCarry();  
-    case INDIRECT_X:
-      addr = readZeroPage(val + regs.x) + (readZeroPage(val + regs.x + 1) << 8);
-      val = ~readByte(addr) + 1 + getFlagCarry();
-    case INDIRECT_Y:
-      addr = readZeroPage(val) + (readZeroPage(val + 1) << 8);
-      val = ~readByte(addr + regs.y) + 1 + getFlagCarry();
-    default:
-      printf("Unexpected mode at sbc2\n");
-      exit(1);
-  }
-  res = val + regs.a;
-  VFlag(val, regs.a, res);
-  res > regs.a ? setFlagCarry(1) : setFlagCarry(0);
-  regs.a = res;
-  SZFlag(regs.a);
+void sbc_imm(unsigned char val, unsigned char garbage) {
+  val = ~val + 1 + getFlagCarry();
+  garbage = val + regs.a;
+  VFlag(val, regs.a, garbage);
+  garbage > regs.a ? setFlagCarry(1) : setFlagCarry(0);
+  regs.a = garbage;
+  SZFlags(regs.a);
 }
 
-void sbc3(unsigned char lower, unsigned char upper, unsigned char mode) {
+void sbc_zp(unsigned char val, unsigned char garbage) {
+  val = ~readZeroPage(val) + 1 + getFlagCarry();
+  garbage = val + regs.a;
+  VFlag(val, regs.a, garbage);
+  garbage > regs.a ? setFlagCarry(1) : setFlagCarry(0);
+  regs.a = garbage;
+  SZFlags(regs.a);
+}
+
+void sbc_zp_x(unsigned char val, unsigned char garbage) {
+  val = ~readZeroPage(regs.x + val) + 1 + getFlagCarry();  
+  garbage = val + regs.a;
+  VFlag(val, regs.a, garbage);
+  garbage > regs.a ? setFlagCarry(1) : setFlagCarry(0);
+  regs.a = garbage;
+  SZFlags(regs.a);
+}
+
+void sbc_ind_x(unsigned char val, unsigned char garbage) {
+  unsigned short addr;
+  addr = readZeroPage(val + regs.x) + (readZeroPage(val + regs.x + 1) << 8);
+  val = ~readByte(addr) + 1 + getFlagCarry();
+  garbage = val + regs.a;
+  VFlag(val, regs.a, garbage);
+  garbage > regs.a ? setFlagCarry(1) : setFlagCarry(0);
+  regs.a = garbage;
+  SZFlags(regs.a);
+}
+
+void sbc_ind_y(unsigned char val, unsigned char garbage) {
+  unsigned short addr;
+  addr = readZeroPage(val) + (readZeroPage(val + 1) << 8);
+  val = ~readByte(addr + regs.y) + 1 + getFlagCarry();
+  garbage = val + regs.a;
+  VFlag(val, regs.a, garbage);
+  garbage > regs.a ? setFlagCarry(1) : setFlagCarry(0);
+  regs.a = garbage;
+  SZFlags(regs.a);
+}
+
+void sbc_abs(unsigned char lower, unsigned char upper) {
   unsigned char res;
   unsigned short addr;
-  switch (mode) {
-    case ABSOLUTE:
-      addr = (upper << 8) + lower;
-      lower = ~readByte(addr) + 1 + getFlagCarry();
-    case ABSOLUTE_X:
-      addr = (upper << 8) + lower + regs.x;
-      lower = ~readByte(addr) + 1 + getFlagCarry();
-    case ABSOLUTE_Y:
-      addr = (upper << 8) + lower + regs.y;
-      lower = ~readByte(addr) + 1 + getFlagCarry();
-    default:
-      printf("Unexpected mode at sbc3\n");
-      exit(1);
-  }
+  addr = (upper << 8) + lower;
+  lower = ~readByte(addr) + 1 + getFlagCarry();
   res = lower + regs.a;
   VFlag(lower, regs.a, res);
   res > regs.a ? setFlagCarry(1) : setFlagCarry(0);
   regs.a = res;
-  SZFlag(regs.a);
+  SZFlags(regs.a);
 }
 
-void sta2(unsigned char val, unsigned char mode) {
+void sbc_abs_x(unsigned char lower, unsigned char upper) {
+  unsigned char res;
   unsigned short addr;
-  switch (mode) {
-    case ZERO_PAGE:
-      regs.a = readZeroPage(val);
-    case ZERO_PAGE_X:
-      regs.a = readZeroPage(val+regs.x);
-    case INDIRECT_X:
-      addr = readZeroPage(val + regs.x) + (readZeroPage(val + regs.x + 1) << 8);
-      regs.a = readByte(addr);
-    case INDIRECT_Y:
-      addr = readZeroPage(val) + (readZeroPage(val + 1) << 8);
-      regs.a = readByte(addr + regs.y);
-    default:
-      printf("Unexpected mode at sta2\n");
-      exit(1);
-  }
+  addr = (upper << 8) + lower + regs.x;
+  lower = ~readByte(addr) + 1 + getFlagCarry();
+  res = lower + regs.a;
+  VFlag(lower, regs.a, res);
+  res > regs.a ? setFlagCarry(1) : setFlagCarry(0);
+  regs.a = res;
+  SZFlags(regs.a);
 }
 
-void sta3(unsigned char lower, unsigned char upper, unsigned char mode) {
+
+void sbc_abs_y(unsigned char lower, unsigned char upper) {
+  unsigned char res;
   unsigned short addr;
-  switch (mode) {
-    case ABSOLUTE:
-      addr = (upper << 8) + lower;
-    case ABSOLUTE_X:
-      addr = (upper << 8) + lower + regs.x;
-    case ABSOLUTE_Y:
-      addr = (upper << 8) + lower + regs.y;
-    default:
-      printf("Unexpected mode at sta3\n");
-      exit(1);
-  }
+  addr = (upper << 8) + lower + regs.y;
+  lower = ~readByte(addr) + 1 + getFlagCarry();
+  res = lower + regs.a;
+  VFlag(lower, regs.a, res);
+  res > regs.a ? setFlagCarry(1) : setFlagCarry(0);
+  regs.a = res;
+  SZFlags(regs.a);
+}
+
+
+void sta_zp(unsigned char val, unsigned char garbage) {
+  regs.a = readZeroPage(val);
+}
+
+void sta_zp_x(unsigned char val, unsigned char garbage) {
+  regs.a = readZeroPage(val + regs.x);
+}
+
+void sta_ind_x(unsigned char val, unsigned char garbage) {
+  unsigned short addr = readZeroPage(val + regs.x) + (readZeroPage(val + regs.x + 1) << 8);
   regs.a = readByte(addr);
 }
 
-void txs(void) { regs.sp = regs.x; }
+void sta_ind_y(unsigned char val, unsigned char garbage) {
+  unsigned short addr = readZeroPage(val) + (readZeroPage(val + 1) << 8);
+  regs.a = readByte(addr + regs.y);
+}
 
-void tsx(void) { regs.x = regs.sp; }
+void sta_abs(unsigned char lower, unsigned char upper) {
+  unsigned short addr = (upper << 8) + lower;
+  regs.a = readByte(addr);
+}
 
-void pha(void) { pushStack(regs.a); }
+void sta_abs_x(unsigned char lower, unsigned char upper) {
+  unsigned short addr = (upper << 8) + lower + regs.x;
+  regs.a = readByte(addr);
+}
 
-void pla(void) { regs.a = popStack(); }
+void sta_abs_y(unsigned char lower, unsigned char upper) {
+  unsigned short addr = (upper << 8) + lower + regs.y;
+  regs.a = readByte(addr);
+}
 
-void php(void) { pushStack(regs.p); }
+void txs(unsigned char garb0, unsigned char garb1) { regs.sp = regs.x; }
 
-void plp(void) { regs.p = popStack(); }
+void tsx(unsigned char garb0, unsigned char garb1) { regs.x = regs.sp; }
 
-void stx_zp(unsigned char val) { regs.x = readZeroPage(val); }
+void pha(unsigned char garb0, unsigned char garb1) { pushStack(regs.a); }
 
-void stx_zp_y(unsigned char val) { regs.x = readZeroPage(val+regs.y); }
+void pla(unsigned char garb0, unsigned char garb1) { regs.a = popStack(); }
+
+void php(unsigned char garb0, unsigned char garb1) { pushStack(regs.p); }
+
+void plp(unsigned char garb0, unsigned char garb1) { regs.p = popStack(); }
+
+void stx_zp(unsigned char val, unsigned char garb) { regs.x = readZeroPage(val); }
+
+void stx_zp_y(unsigned char val, unsigned char garb) { regs.x = readZeroPage(val+regs.y); }
 
 void stx_abs(unsigned char lower, unsigned char upper) {
   unsigned short addr = (readByte(upper)) << 8 + readByte(lower);
   regs.x = readByte(addr);
 }
 
-void sty_zp(unsigned char val) { regs.y = readZeroPage(val); }
+void sty_zp(unsigned char val, unsigned char garb) { regs.y = readZeroPage(val); }
 
-void sty_zp_x(unsigned char val) { regs.y = readZeroPage(val+regs.x); }
+void sty_zp_x(unsigned char val, unsigned char garb) { regs.y = readZeroPage(val+regs.x); }
 
 void sty_abs(unsigned char lower, unsigned char upper) {
   unsigned short addr = (readByte(upper) << 8) + readByte(lower);

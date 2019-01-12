@@ -9,6 +9,6 @@ struct opcode {
   u_int8_t operands;
 };
 
-void cpuStep(void);
+void step(void);
 
 #endif

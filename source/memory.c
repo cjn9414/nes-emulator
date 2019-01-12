@@ -1,6 +1,6 @@
 #include "memory.h"
 #include "registers.h"
-#include "mmc1.h"
+#include "MMC1.h"
 
 extern struct registers regs;
 
