@@ -35,6 +35,21 @@ extern struct Header head;
 
 
 /**
+ * Performs SDL and memory management
+ * related cleanup operations before the
+ * program terminates.
+ */
+void cleanup(void) {
+  SDL_DestroyRenderer(display.renderer); 
+  SDL_DestroyWindow(display.window); 
+  for (int i = 0; i < TILE_ROW*TILE_COL; i++) {
+    SDL_DestroyTexture(display.texture[i]);
+  }
+  SDL_Quit();
+}
+
+
+/**
  * Called once upon the display startup to properly initialize
  * the display and set up key components of the NES graphics.
  */
@@ -73,6 +88,7 @@ void displayInit(void) {
 
   // Create and load textures with pixel data.
   loadTiles();
+  atexit(cleanup);
 }
 
 
@@ -149,10 +165,11 @@ void loadTiles(void) {
   // Declare index used to address color in the color palette.
   unsigned char idx;
   int offset;
+  unsigned char i, j;
   // Iterate through the size of the attribute table, in bytes.
-  for (unsigned char i = 0; i < 64; i++) {
+  for (i = 0; i < 64; i++) {
     // Iterate though the number of tiles per byte of the attribute table.
-    for (unsigned char j = 0; j < 16; j++) { 
+    for (j = 0; j < 16; j++) { 
       // Define the pointer to the SDL_Surface representing the tile.
       SDL_Surface * tile = SDL_CreateRGBSurfaceWithFormat(
         0, 8, 8, 32, SDL_PIXELFORMAT_ARGB8888);
@@ -195,8 +212,14 @@ void loadTiles(void) {
       getPatternData(tile, offset, idx);
 
       // Creates texture from SDL_Surface and updates the texture array.
-      display.texture[j + (16*i)] = SDL_CreateTextureFromSurface(display.renderer, tile);
-      
+      // Edge case, as the upper nybble of each byte in the attribute table
+      // in the last row is not used.
+      if (i >= 56) {
+        if (j < 8) {
+          display.texture[(16*56) + 8*(i-56) + j] = SDL_CreateTextureFromSurface(display.renderer, tile);
+        }
+      } else display.texture[j + (16*i)] = SDL_CreateTextureFromSurface(display.renderer, tile);
+
       // Free the SDL_Surface that was used to make the texture.
       SDL_FreeSurface(tile);
     }
@@ -266,21 +289,6 @@ void presentScene(void)
 
 
 /**
- * Performs SDL and memory management
- * related cleanup operations before the
- * program terminates.
- */
-void cleanup(void) {
-  SDL_DestroyRenderer(display.renderer); 
-  SDL_DestroyWindow(display.window); 
-  for (int i = 0; i < TILE_ROW*TILE_COL; i++) {
-    SDL_DestroyTexture(display.texture[i]);
-  }
-  SDL_Quit();
-}
-
-
-/**
  * Checks and handles any SDL event that occurs
  * during runtime of the program.
  */
@@ -308,15 +316,13 @@ unsigned char handleEvent(void) {
  * Also checks for user events that occur
  * such as closing the display window.
  */
-void runDisplay(void)
+unsigned char runDisplay(void)
 {
-  displayInit();
-	atexit(cleanup);
-  while (1)
-	{
-		prepareScene();
-		if (!handleEvent()) break;
-		presentScene();	
-		SDL_Delay(16);
-	} 
+	prepareScene();
+	if (!handleEvent()) return 1;
+	presentScene();	
+	SDL_Delay(16);
+  return 0;
 }
+
+

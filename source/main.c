@@ -155,10 +155,16 @@ int main(int argc, char **argv) {
   mapperSetup();
   registerPowerup(&regs);
   loadMMC1Ptrs(programData, graphicData);
-
-  // Run the emulator display.
-  runDisplay();
   
+  // Initialize the picture display.
+  displayInit();
+  // Run the emulator display and perform CPU step.
+  while (1) {
+    step();
+    unsigned char displayClosed = runDisplay();
+    if (displayClosed) break;
+
+  }
   // Free dynamically allocated memory.
   free(programData);
   free(graphicData);
