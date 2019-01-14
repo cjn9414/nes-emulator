@@ -11,6 +11,7 @@
  * Effective h-blank time for developer purposes is 79 PPU cycles.
  */
 #define H_BLANK 63
+
 // V-blank starts at scanline 241 (post-render line at 240).
 // Pre-render line at scanline 261.
 #define V_BLANK 20
@@ -20,10 +21,12 @@ unsigned char pTable0[0x1000];
 unsigned char pTable1[0x1000];
 
 // Declares the four name tables in PPU memory.
-NameTable nTable0;
-NameTable nTable1;
-NameTable nTable2;
-NameTable nTable3;
+NameTable nTable0;  // $2000
+NameTable nTable1;  // $2400
+NameTable nTable2;  // $2800
+NameTable nTable3;  // $2C00
+
+enum MirroringType mirror;
 
 // Declares the image and sprite palettes in PPU memory.
 unsigned char imagePalette[0x10];
@@ -96,6 +99,37 @@ const struct color palette[48] = {
   {0x00, 0x00, 0x00},
   {0x00, 0x00, 0x00},
 };
+
+
+/**
+ * HORIZONTAL:
+ * Maps $2000 and $2400 of the ppu to the first physical name table.
+ * Maps $2800 and $2C00 of the ppu to the second physical name table.
+ *
+ * VERTICAL:
+ * Maps $2000 and $2800 of the ppu to the first physical name table.
+ * Maps $2400 and $2C00 of the ppu to the second physical name table.
+ *
+ * ONE-SCREEN:
+ * Maps all virtual name tables to the first physical name table.
+ *
+ * FOUR-SCREEN:
+ * Maps each virtual name table to a physical name table using
+ * 2KB of RAM in the game cartridge.
+ */
+void setMirroring(enum MirroringType newMirror) {
+    mirror = newMirror;
+}
+
+
+/**
+ * Takes the ppu through a single cycle. 
+ * The cycle of the ppu takes one-third
+ * of the time of a cpu cycle.
+ */
+void ppuStep(void) {
+  return;
+}
 
 
 

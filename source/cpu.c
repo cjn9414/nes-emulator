@@ -6,20 +6,6 @@
 #include "registers.h"
 
 #define KB 1024
-#define ZERO_PAGE 0
-#define ZERO_PAGE_X 1
-#define ZERO_PAGE_Y 2
-#define ABSOLUTE 3
-#define ABSOLUTE_X 4
-#define ABSOLUTE_Y 5
-#define INDIRECT 6
-#define INDIRECT_X 7
-#define INDIRECT_Y 8
-#define IMPLIED 9
-#define ACCUMULATOR 10
-#define IMMEDIATE 11
-#define RELATIVE 12
-#define INVALID -1
 
 extern struct registers regs;
 extern unsigned char prg_rom_lower[0x4000];

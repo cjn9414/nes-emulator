@@ -2,3 +2,5 @@
 *.o
 SDL2-2.0.9
 source/obj
+branch_timing_tests/
+display
