@@ -1,4 +1,5 @@
 #include "ppu.h"
+#include "visualTest.h"
 
 #define KB 1024
 
@@ -10,11 +11,11 @@
  * The remaining cycles (337-340) represent unused fetches.
  * Effective h-blank time for developer purposes is 79 PPU cycles.
  */
-#define H_BLANK 63
+#define H_BLANK_START 258
 
 // V-blank starts at scanline 241 (post-render line at 240).
-// Pre-render line at scanline 261.
-#define V_BLANK 20
+// Pre-render line at scanline 261 (V-blank lasts 20 cycles).
+#define V_BLANK_START 241
 
 // Declares the two patten tables in PPU memory.
 unsigned char pTable0[0x1000];
@@ -26,7 +27,14 @@ NameTable nTable1;  // $2400
 NameTable nTable2;  // $2800
 NameTable nTable3;  // $2C00
 
+// Stores the mirroring type for the name tables.
+// Stores frame and scanline status as an enumerated type.
 enum MirroringType mirror;
+enum FrameStatus lineType;
+enum ScanlineStatus cycleType;
+
+// Stores the current count for the scanline and each cycle within.
+unsigned int scanCount, cycleCount; 
 
 // Declares the image and sprite palettes in PPU memory.
 unsigned char imagePalette[0x10];
@@ -126,9 +134,41 @@ void setMirroring(enum MirroringType newMirror) {
  * Takes the ppu through a single cycle. 
  * The cycle of the ppu takes one-third
  * of the time of a cpu cycle.
+ * Uses NTSC timing.
  */
 void ppuStep(void) {
-  return;
+  // Handle state of the current scanline and cycle.
+  switch (cycleCount) {
+    case 0:
+      scanCount++;
+      break;
+    case 1:
+      cycleType = VISIBLE;
+      if (scanCount == 0) lineType = VISIBLE;
+      else if (scanCount == 240) lineType = POST_RENDER;
+      else if (scanCount == 241) lineType = V_BLANK;
+      else if (scanCount == 261) lineType = PRE_RENDER;
+      break;
+    case 249:
+      cycleType = UNUSED_FETCH;
+      break;
+    case 258:
+      cycleType = H_BLANK;
+      break;
+    case 321:
+      cycleType = PRE_FETCH;
+      break;
+    case 337:
+      cycleType = UNUSED_FETCH;
+      break;
+    default:
+      break;
+  }
+
+  //TODO: Handle events dependent on the scanline and cycle.
+
+  // Increment the cycle and reset it if it equals 340.
+  cycleCount = cycleCount == 340 ? 0 : cycleCount + 1;
 }
 
 
