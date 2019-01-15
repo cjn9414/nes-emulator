@@ -6,7 +6,7 @@ extern struct registers regs;
 
 // Declaring components of CPU memory. 
 unsigned char ram[0x0800];
-unsigned char ppu_reg[0x0008];
+extern MemoryMappedRegisters ppu_registers;
 unsigned char apu_io_reg[0x0020];
 unsigned char exp_rom[0x1FDF];
 unsigned char sram[0x2000];
@@ -22,13 +22,48 @@ unsigned char prg_rom_upper[0x4000];
  * @returns: Value at address in CPU memory.
  */
 unsigned char readByte(unsigned short addr) {
-  // Addressing the RAM of CPU memory.
+  // Mirroring occurs from $2000-$2007 to $2008-$4000.
+  if (addr >= 0x2008 && addr < 0x4000) {
+    addr = 0x2000 + (addr % 0x0008);
+  }
+
+  // Mirroring occurs from $0000-$07FF to $0800-$1FFF.
   if (addr < 0x2000) {
+    addr = addr % 0x800;
+    // Addressing the RAM of CPU memory.
     return ram[addr];
   }
   // Addressing the PPU registers in CPU memory.
-  else if (addr < 0x4000) {
-    return ppu_reg[(addr - 0x2000)];
+  else if (addr < 0x2008) {
+    switch (addr) {
+      case 0x2000:
+        return ppu_registers.PPUControl;
+        break;
+      case 0x2001:
+        return ppu_registers.PPUMask;
+        break;
+      case 0x2002:
+        return ppu_registers.PPUStatus;
+        break;
+      case 0x2003:
+        return ppu_registers.OAMAddress;
+        break;
+      case 0x2004:
+        return ppu_registers.OAMData;
+        break;
+      case 0x2005:
+        return ppu_registers.PPUScroll;
+        break;
+      case 0x2006:
+        return ppu_registers.PPUAddress;
+        break;
+      case 0x2007:
+        return ppu_registers.PPUData;
+        break;
+      default:
+        printf("Error: Unexpected address to memory mapper I/O registers.\n");
+        exit(1);
+    }
   }
   // Addressing the Audio Processing registers in CPU memory.
   else if (addr < 0x4020) {
@@ -85,7 +120,35 @@ void writeByte (unsigned short addr, unsigned char val) {
   }
   // Write to PPU registers in CPU memory.
   else if (addr < 0x2008) {
-    ppu_reg[addr - 0x2000];
+    switch(addr) {
+      case 0x2000:
+        ppu_registers.PPUControl = val;
+        break;
+      case 0x2001:
+        ppu_registers.PPUMask = val;
+        break;
+      case 0x2002:
+        ppu_registers.PPUStatus = val;
+        break;
+      case 0x2003:
+        ppu_registers.OAMAddress = val;
+        break;
+      case 0x2004:
+        ppu_registers.OAMData = val;
+        break;
+      case 0x2005:
+        ppu_registers.PPUScroll = val;
+        break;
+      case 0x2006:
+        ppu_registers.PPUAddress = val;
+        break;
+      case 0x2007:
+        ppu_registers.PPUData = val;
+        break;
+      default:
+        printf("Error: Unexpected address to memory mapper I/O registers.\n");
+        exit(1);
+      }
   }
   // Write to Audio Processing registers in CPU memory.
   else if (addr < 0x4020) {

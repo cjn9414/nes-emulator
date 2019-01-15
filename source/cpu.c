@@ -1463,8 +1463,9 @@ void step(void) {
   unsigned char time = cycles[opcode];
   unsigned char len = opcodes[opcode].operands;
   unsigned char arg1, arg2;
-  arg1 = regs.pc > 0x3FFF ? prg_rom_lower[regs.pc+1] : prg_rom_upper[regs.pc+1- 0x4000];
-  arg2 = regs.pc > 0x3FFF ? prg_rom_lower[regs.pc+2] : prg_rom_upper[regs.pc+2- 0x4000];
+  arg1 = regs.pc > 0x3FFF ? prg_rom_lower[regs.pc + 1] : prg_rom_upper[regs.pc + 1 - 0x4000];
+  arg2 = regs.pc > 0x3FFF ? prg_rom_lower[regs.pc + 2] : prg_rom_upper[regs.pc + 2 - 0x4000];
   functions[opcode](arg1, arg2);
   regs.pc += len;
 }
+

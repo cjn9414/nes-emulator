@@ -181,8 +181,7 @@ void loadTiles(void) {
       }
       // Define the offset of the tile data in the pattern table.
       // May be incremented before it is used next.
-      offset = 4*(i%8);
-
+      offset = 4*(i%8) + 128*(i/8);
       // Upper-left quadrant.
       if (j < 4) {
         idx = (0x3 & nTable0.attr[i]) << 2;   // get bits 1/0
@@ -207,7 +206,7 @@ void loadTiles(void) {
 
       // Right two tiles of 2x2 tile area. Offset incremented by one.
       if (j % 2 == 1) offset += 1;
-
+      
       // Loads pixel data into SDL_Surface.
       getPatternData(tile, offset, idx);
 

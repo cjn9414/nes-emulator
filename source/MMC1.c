@@ -15,29 +15,15 @@ extern unsigned char pTable0[0x1000];
 extern unsigned char pTable1[0x1000];
 
 extern NameTable nTable0;
+extern NameTable nTable1;
+extern NameTable nTable2;
+extern NameTable nTable3;
 
 extern struct PPU ppu;
 
 // Declare pointers to the cartridge PRG ROM and CHR ROM.
-unsigned char * programData;
-unsigned char * graphicData;
-
-
-/**
- * Loads the pointers to the program and
- * graphical data originally from the .nes file into
- * this file.
- *  
- * @param p: program data pointer.
- * @param g: graphical data pointer.
- */
-void loadMMC1Ptrs(unsigned char * p, unsigned char * g) {
-  programData = p;
-  graphicData = g;
-  memcpy(pTable0, graphicData+0x0000, 0x1000);
-  memcpy(nTable0.tbl, graphicData+0x2000, 0x3C0);
-  memcpy(nTable0.attr, graphicData+0x23C0, 0x40);
-}
+extern unsigned char * programData;
+extern unsigned char * graphicData;
 
 
 /**
@@ -97,7 +83,11 @@ void mmc1Write(unsigned short addr, unsigned char val) {
 
 /**
  * Sets the mmc1 registers to their respective
- * power-on values.
+ * power-on values, and loads this file's pointers
+ * to the cartridge data.
+ *
+ * @param p: program data pointer.
+ * @param g: graphical data pointer.
  */
 unsigned char MMC1Setup(void) {
   mmc1.mainControl = mmc1.mainControl | 0b00000100;

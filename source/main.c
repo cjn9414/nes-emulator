@@ -13,6 +13,10 @@ struct registers regs;
 struct Header head;
 struct MMC1 mmc1;
 
+// Declare pointers to cartridge data.
+unsigned char * programData;
+unsigned char * graphicData;
+
 
 /**
  * Called once from the main function to
@@ -133,8 +137,8 @@ int main(int argc, char **argv) {
     exit(1);
   }
   // Declare the ROM data that will be copied from the .nes file.
-  unsigned char * programData = malloc(16*KB*head.n_prg_banks);
-  unsigned char * graphicData = malloc(8*KB*head.n_chr_banks);
+  programData = malloc(16*KB*head.n_prg_banks);
+  graphicData = malloc(8*KB*head.n_chr_banks);
   unsigned char * trainer;
   
   // If the trainer exists in the file, load it into the array.
@@ -154,7 +158,6 @@ int main(int argc, char **argv) {
   
   mapperSetup();
   registerPowerup(&regs);
-  loadMMC1Ptrs(programData, graphicData);
   
   // Initialize the picture display.
   displayInit();

@@ -1,5 +1,7 @@
 #include "ppu.h"
 #include "visualTest.h"
+#include "cpu.h"
+
 
 #define KB 1024
 
