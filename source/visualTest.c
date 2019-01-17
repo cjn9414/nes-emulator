@@ -165,11 +165,10 @@ void loadTiles(void) {
   // Declare index used to address color in the color palette.
   unsigned char idx;
   int offset;
-  unsigned char i, j;
   // Iterate through the size of the attribute table, in bytes.
-  for (i = 0; i < 64; i++) {
+  for (unsigned char i = 0; i < 64; i++) {
     // Iterate though the number of tiles per byte of the attribute table.
-    for (j = 0; j < 16; j++) { 
+    for (unsigned char j = 0; j < 16; j++) { 
       // Define the pointer to the SDL_Surface representing the tile.
       SDL_Surface * tile = SDL_CreateRGBSurfaceWithFormat(
         0, 8, 8, 32, SDL_PIXELFORMAT_ARGB8888);
@@ -260,7 +259,8 @@ void getPatternData(SDL_Surface * tile, int offset, unsigned char idx) {
       
       // Find the color in the palette from the index, and 
       // set the respective address in the pixel data array to the color.
-      tilePixels[ (row * tile->w) + (7-col) ] = color2int(palette[idx]);
+      //tilePixels[ (row * tile->w) + (7-col) ] = color2int(palette[idx]);
+      tilePixels[ (row * tile->w) + (7-col) ] = color2int(palette[spritePalette[idx]]);
     }
   }
 }

@@ -10,6 +10,7 @@ typedef struct {
   unsigned char PPUScroll;   // 0x2005
   unsigned char PPUAddress;  // 0x2006
   unsigned char PPUData;     // 0x2007
+  unsigned short PPUWriteLatch;
 } MemoryMappedRegisters;
 
 MemoryMappedRegisters ppu_registers;

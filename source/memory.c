@@ -2,6 +2,8 @@
 #include "registers.h"
 #include "MMC1.h"
 
+#include "ppu.h"  // will remove this eventually
+
 extern struct registers regs;
 
 // Declaring components of CPU memory. 
@@ -12,7 +14,6 @@ unsigned char exp_rom[0x1FDF];
 unsigned char sram[0x2000];
 unsigned char prg_rom_lower[0x4000];
 unsigned char prg_rom_upper[0x4000];
-
 
 /**
  * Obtains a byte of data from the CPU memory.
@@ -38,28 +39,25 @@ unsigned char readByte(unsigned short addr) {
     switch (addr) {
       case 0x2000:
         return ppu_registers.PPUControl;
-        break;
       case 0x2001:
         return ppu_registers.PPUMask;
-        break;
       case 0x2002:
+        ppu_registers.PPUWriteLatch = 0;
         return ppu_registers.PPUStatus;
-        break;
       case 0x2003:
         return ppu_registers.OAMAddress;
-        break;
       case 0x2004:
         return ppu_registers.OAMData;
-        break;
       case 0x2005:
         return ppu_registers.PPUScroll;
-        break;
       case 0x2006:
         return ppu_registers.PPUAddress;
-        break;
       case 0x2007:
-        return ppu_registers.PPUData;
-        break;
+        {
+        unsigned char val = readPictureByte(ppu_registers.PPUWriteLatch);
+        ppu_registers.PPUWriteLatch += getBit(ppu_registers.PPUControl, 2) ? 32 : 1;
+        return val;
+        }
       default:
         printf("Error: Unexpected address to memory mapper I/O registers.\n");
         exit(1);
@@ -138,9 +136,13 @@ void writeByte (unsigned short addr, unsigned char val) {
         break;
       case 0x2005:
         ppu_registers.PPUScroll = val;
+        ppu_registers.PPUWriteLatch <<= 8;
+        ppu_registers.PPUWriteLatch |= val;
         break;
       case 0x2006:
         ppu_registers.PPUAddress = val;
+        ppu_registers.PPUWriteLatch <<= 8;
+        ppu_registers.PPUWriteLatch |= val;
         break;
       case 0x2007:
         ppu_registers.PPUData = val;

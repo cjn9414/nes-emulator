@@ -652,8 +652,10 @@ void jmp_ind(unsigned char val, unsigned char garb) {
 }
 
 void jsr(unsigned char lower, unsigned char upper) {
-  unsigned short toStack = (upper << 8) + lower - 1;
+  unsigned short toStack = regs.pc + 3 - 1;
+  regs.pc = (upper << 8) + lower;
   pushStack(toStack);
+
 }
 
 void ldx_imm(unsigned char addr, unsigned char garb) {
@@ -682,8 +684,6 @@ void ldx_abs_y(unsigned char lower, unsigned char upper) {
   regs.x = readByte(addr);
   SZFlags(regs.x);
 }
-
-
 
 void ldy_imm(unsigned char addr, unsigned char garb) {
   regs.y = addr;
@@ -1459,13 +1459,14 @@ FunctionExecute functions[0xFF] = {
  * the next opcode instruction.
  */
 void step(void) {
-  unsigned char opcode = regs.pc > 0x3FFF ? prg_rom_lower[regs.pc] : prg_rom_upper[regs.pc- 0x4000];
+  unsigned char opcode = regs.pc > 0x3FFF ? prg_rom_upper[regs.pc-0x4000] : prg_rom_lower[regs.pc];
   unsigned char time = cycles[opcode];
   unsigned char len = opcodes[opcode].operands;
+  unsigned char * opName = opcodes[opcode].code;
   unsigned char arg1, arg2;
-  arg1 = regs.pc > 0x3FFF ? prg_rom_lower[regs.pc + 1] : prg_rom_upper[regs.pc + 1 - 0x4000];
-  arg2 = regs.pc > 0x3FFF ? prg_rom_lower[regs.pc + 2] : prg_rom_upper[regs.pc + 2 - 0x4000];
+  arg1 = regs.pc > 0x3FFF ? prg_rom_upper[regs.pc + 1 - 0x4000] : prg_rom_upper[regs.pc + 1];
+  arg2 = regs.pc > 0x3FFF ? prg_rom_upper[regs.pc + 2 - 0x4000] : prg_rom_upper[regs.pc + 2];
   functions[opcode](arg1, arg2);
-  regs.pc += len;
+  regs.pc += (strcmp(opName, "JSR") != 0 && strcmp(opName, "JMP") != 0) ? len : 0;
 }
 
