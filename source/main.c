@@ -160,7 +160,6 @@ int main(int argc, char **argv) {
   registerPowerup(&regs);
   // Initialize the picture display.
   displayInit();
-  
   // Run the emulator display and perform CPU step.
   while (1) {
     step();

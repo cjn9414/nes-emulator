@@ -78,26 +78,6 @@ void setFlagNegative(unsigned char bit) {
 
 
 /**
- * The next set of functions will retrieve a flag
- * from the status register. For each function:
- *
- * @returns: Flag value. Returns 1 for set or 0 for clear.
- */
-
-unsigned char getFlagCarry(void) { return (regs.p << 7) >> 7; }
-
-unsigned char getFlagZero(void) { return (regs.p << 6) >> 7; }
-
-unsigned char getFlagInterrupt(void) { return (regs.p << 5) >> 7; }
-
-unsigned char getFlagBreak(void) { return (regs.p << 3) >> 7; }
-
-unsigned char getFlagOverflow(void) { return (regs.p << 2) >> 7; }
-
-unsigned char getFlagNegative(void) { return (regs.p << 1) >> 7; }
-
-
-/**
  * Retrieves a selected bit from a given byte.
  *
  * @param byte: Byte in which a bit is retrieved from.
@@ -106,8 +86,30 @@ unsigned char getFlagNegative(void) { return (regs.p << 1) >> 7; }
  * @returns: 1 or 0, if the selected bit is set or not.
  */
 unsigned char getBit(unsigned char byte, unsigned char bit) {
-  return (byte & (1 << bit)) >> bit;
+  bit = (byte & (1 << bit)) >> bit;
+  return bit;
 }
+
+
+/**
+ * The next set of functions will retrieve a flag
+ * from the status register. For each function:
+ *
+ * @returns: Flag value. Returns 1 for set or 0 for clear.
+ */
+
+unsigned char getFlagCarry(void) { return getBit(regs.p, 0); }
+
+unsigned char getFlagZero(void) { return getBit(regs.p, 1); }
+
+unsigned char getFlagInterrupt(void) { return getBit(regs.p, 2); }
+
+unsigned char getFlagBreak(void) { return getBit(regs.p, 4); }
+
+unsigned char getFlagOverflow(void) { return getBit(regs.p, 6); }
+
+unsigned char getFlagNegative(void) { return getBit(regs.p, 7); }
+
 
 /**
  * Determines if the overflag should be set after an instruction.
@@ -130,6 +132,7 @@ void VFlag(unsigned char a, unsigned char b, unsigned char c) {
  * @param val: Resolution to an instruction.
  */
 void SZFlags(unsigned char val) {
+  printf("%x", val);
   if (val == 0) setFlagZero(1);
   else if (val >> 7) setFlagNegative(1);
   else {
@@ -148,7 +151,7 @@ void SZFlags(unsigned char val) {
  *             program counter backwards.
  */
 void branchJump(unsigned char val) {
-  if (getBit(7, val) == 0) {
+  if (!getBit(val, 7)) {
     regs.pc += val;
   } else {
     val = ~val + 1;
@@ -651,11 +654,12 @@ void jmp_ind(unsigned char val, unsigned char garb) {
   regs.pc = readByte(addr);
 }
 
-void jsr(unsigned char lower, unsigned char upper) {
-  unsigned short toStack = regs.pc + 3 - 1;
-  regs.pc = (upper << 8) + lower;
-  pushStack(toStack);
-
+void jsr(unsigned char upper, unsigned char lower) {
+  unsigned short val = regs.pc + 3 - 1;
+  pushStack(val >> 8);
+  pushStack(val & 0x00FF);
+  val = (upper << 8) + lower;
+  regs.pc = val;
 }
 
 void ldx_imm(unsigned char addr, unsigned char garb) {
@@ -1087,36 +1091,36 @@ void sbc_abs_y(unsigned char lower, unsigned char upper) {
 
 
 void sta_zp(unsigned char val, unsigned char garbage) {
-  regs.a = readZeroPage(val);
+  writeZeroPage(val, regs.a);
 }
 
 void sta_zp_x(unsigned char val, unsigned char garbage) {
-  regs.a = readZeroPage(val + regs.x);
+  writeZeroPage(val + regs.x, regs.a);
 }
 
 void sta_ind_x(unsigned char val, unsigned char garbage) {
   unsigned short addr = readZeroPage(val + regs.x) + (readZeroPage(val + regs.x + 1) << 8);
-  regs.a = readByte(addr);
+  writeByte(addr, regs.a);
 }
 
 void sta_ind_y(unsigned char val, unsigned char garbage) {
   unsigned short addr = readZeroPage(val) + (readZeroPage(val + 1) << 8);
-  regs.a = readByte(addr + regs.y);
+  writeByte(addr + regs.y, regs.a);
 }
 
 void sta_abs(unsigned char lower, unsigned char upper) {
   unsigned short addr = (upper << 8) + lower;
-  regs.a = readByte(addr);
+  writeByte(addr, regs.a);
 }
 
 void sta_abs_x(unsigned char lower, unsigned char upper) {
   unsigned short addr = (upper << 8) + lower + regs.x;
-  regs.a = readByte(addr);
+  writeByte(addr, regs.a);
 }
 
 void sta_abs_y(unsigned char lower, unsigned char upper) {
   unsigned short addr = (upper << 8) + lower + regs.y;
-  regs.a = readByte(addr);
+  writeByte(addr, regs.a);
 }
 
 void txs(unsigned char garb0, unsigned char garb1) { regs.sp = regs.x; }
@@ -1131,22 +1135,22 @@ void php(unsigned char garb0, unsigned char garb1) { pushStack(regs.p); }
 
 void plp(unsigned char garb0, unsigned char garb1) { regs.p = popStack(); }
 
-void stx_zp(unsigned char val, unsigned char garb) { regs.x = readZeroPage(val); }
+void stx_zp(unsigned char val, unsigned char garb) { writeZeroPage(val, regs.x); }
 
-void stx_zp_y(unsigned char val, unsigned char garb) { regs.x = readZeroPage(val+regs.y); }
+void stx_zp_y(unsigned char val, unsigned char garb) { writeZeroPage(val+regs.y, regs.x); }
 
 void stx_abs(unsigned char lower, unsigned char upper) {
   unsigned short addr = (readByte(upper)) << 8 + readByte(lower);
-  regs.x = readByte(addr);
+  writeByte(addr, regs.x);
 }
 
-void sty_zp(unsigned char val, unsigned char garb) { regs.y = readZeroPage(val); }
+void sty_zp(unsigned char val, unsigned char garb) { writeZeroPage(val, regs.y); }
 
-void sty_zp_x(unsigned char val, unsigned char garb) { regs.y = readZeroPage(val+regs.x); }
+void sty_zp_x(unsigned char val, unsigned char garb) { writeZeroPage(val+regs.x, regs.y); }
 
 void sty_abs(unsigned char lower, unsigned char upper) {
   unsigned short addr = (readByte(upper) << 8) + readByte(lower);
-  regs.y = readByte(addr);
+  writeByte(addr, regs.y);
 }
 
 /**
@@ -1459,13 +1463,13 @@ FunctionExecute functions[0xFF] = {
  * the next opcode instruction.
  */
 void step(void) {
-  unsigned char opcode = regs.pc > 0x3FFF ? prg_rom_upper[regs.pc-0x4000] : prg_rom_lower[regs.pc];
+  unsigned char opcode = readByte(regs.pc);
   unsigned char time = cycles[opcode];
   unsigned char len = opcodes[opcode].operands;
   unsigned char * opName = opcodes[opcode].code;
   unsigned char arg1, arg2;
-  arg1 = regs.pc > 0x3FFF ? prg_rom_upper[regs.pc + 1 - 0x4000] : prg_rom_upper[regs.pc + 1];
-  arg2 = regs.pc > 0x3FFF ? prg_rom_upper[regs.pc + 2 - 0x4000] : prg_rom_upper[regs.pc + 2];
+  arg1 = readByte(regs.pc + 1);
+  arg2 = readByte(regs.pc + 2);
   functions[opcode](arg1, arg2);
   regs.pc += (strcmp(opName, "JSR") != 0 && strcmp(opName, "JMP") != 0) ? len : 0;
 }
