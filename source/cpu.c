@@ -645,8 +645,7 @@ void inc_abs_x(unsigned char lower, unsigned char upper) {
 }
 
 void jmp_abs(unsigned char lower, unsigned char upper) {
-  unsigned short addr = (upper << 8) + lower;
-  regs.pc = readByte(addr);
+  regs.pc = (upper << 8) + lower;
 }
 
 void jmp_ind(unsigned char val, unsigned char garb) {
@@ -654,7 +653,7 @@ void jmp_ind(unsigned char val, unsigned char garb) {
   regs.pc = readByte(addr);
 }
 
-void jsr(unsigned char upper, unsigned char lower) {
+void jsr(unsigned char lower, unsigned char upper) {
   unsigned short val = regs.pc + 3 - 1;
   pushStack(val >> 8);
   pushStack(val & 0x00FF);
@@ -1470,6 +1469,7 @@ void step(void) {
   unsigned char arg1, arg2;
   arg1 = readByte(regs.pc + 1);
   arg2 = readByte(regs.pc + 2);
+  printf("%s(%x) %x %x\n", opName, opcode, arg1, arg2);
   functions[opcode](arg1, arg2);
   regs.pc += (strcmp(opName, "JSR") != 0 && strcmp(opName, "JMP") != 0) ? len : 0;
 }

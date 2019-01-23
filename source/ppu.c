@@ -166,7 +166,7 @@ void ppuStep(void) {
     default:
       break;
   }
-
+  
   //TODO: Handle events dependent on the scanline and cycle.
 
   // Increment the cycle and reset it if it equals 340.
