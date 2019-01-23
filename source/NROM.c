@@ -1,13 +1,15 @@
 // NROM represents the absence of a memory mapper.
+#include <stdint.h>
+
 #include "mappers.h"
 #include "main.h"
 #include "ppu.h"
 
-extern unsigned char prg_rom_lower[0x4000];
-extern unsigned char prg_rom_upper[0x4000];
+extern uint8_t prg_rom_lower[0x4000];
+extern uint8_t prg_rom_upper[0x4000];
 
-extern unsigned char pTable0[0x1000];
-extern unsigned char pTable1[0x1000];
+extern uint8_t pTable0[0x1000];
+extern uint8_t pTable1[0x1000];
 extern NameTable nTable0;
 extern NameTable nTable1;
 extern NameTable nTable2;
@@ -15,10 +17,10 @@ extern NameTable nTable3;
 
 // Redeclare external variable.
 extern struct Header head;
-extern unsigned char * programData;
-extern unsigned char * graphicData;
+extern uint8_t * programData;
+extern uint8_t * graphicData;
 
-unsigned char NROMSetup(void) {
+uint8_t NROMSetup(void) {
   if (head.n_chr_banks == 1) {
     memcpy(pTable0, graphicData, 0x1000);
     memcpy(pTable1, graphicData + 0x1000, 0x1000);

@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 #include "ppu.h"
 #include "visualTest.h"
 #include "cpu.h"
@@ -20,8 +22,8 @@
 #define V_BLANK_START 241
 
 // Declares the two patten tables in PPU memory.
-unsigned char pTable0[0x1000];
-unsigned char pTable1[0x1000];
+uint8_t pTable0[0x1000];
+uint8_t pTable1[0x1000];
 
 // Declares the four name tables in PPU memory.
 NameTable nTable0;  // $2000
@@ -39,8 +41,8 @@ enum ScanlineStatus cycleType;
 unsigned int scanCount, cycleCount; 
 
 // Declares the image and sprite palettes in PPU memory.
-unsigned char imagePalette[0x10];
-unsigned char spritePalette[0x10];
+uint8_t imagePalette[0x10];
+uint8_t spritePalette[0x10];
 
 // Defines the palette for the NES.
 const struct color palette[48] = {
@@ -182,7 +184,7 @@ void ppuStep(void) {
  *
  * @returns: Value of PPU memory at desired address.
  */
-unsigned char readPictureByte(unsigned short addr) {
+uint8_t readPictureByte(unsigned short addr) {
   // Mirroring occurs every 16 KB in PPU
   addr %= 0x4000;
   

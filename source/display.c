@@ -24,14 +24,14 @@ typedef struct {
 // struct to hold display data.
 EmuDisplay display;
 
-extern unsigned char pTable0[0x1000];
-extern unsigned char pTable1[0x1000];
+extern uint8_t pTable0[0x1000];
+extern uint8_t pTable1[0x1000];
 extern NameTable nTable0;
 extern NameTable nTable1;
 extern NameTable nTable2;
 extern NameTable nTable3;
-extern unsigned char imagePalette[0x10];
-extern unsigned char spritePalette[0x10];
+extern uint8_t imagePalette[0x10];
+extern uint8_t spritePalette[0x10];
 extern const struct color palette[48];
 extern struct Header head;
 
@@ -166,7 +166,7 @@ void renderTiles(void) {
  * @param row: 0-7 row from the top of the block that is being displayed.
  * @param texture: optimized pixel data that is being displayed.
  */
-void pushByteOntoDisplay(SDL_Rect * block, unsigned char row, SDL_Texture * texture) {
+void pushByteOntoDisplay(SDL_Rect * block, uint8_t row, SDL_Texture * texture) {
   return;
 }
 
@@ -176,7 +176,7 @@ void pushByteOntoDisplay(SDL_Rect * block, unsigned char row, SDL_Texture * text
  * 
  * @param idx: offset in bytes from the start of the name table.
  */
-unsigned char fetchNTByte(unsigned char idx) {
+uint8_t fetchNTByte(unsigned char idx) {
   return;
 }
 
@@ -187,7 +187,7 @@ unsigned char fetchNTByte(unsigned char idx) {
  * @param idx: offset in bytes from the start of the
  *             attribute table.
  */
-unsigned char fetchATByte(unsigned char idx) {
+uint8_t fetchATByte(unsigned char idx) {
   return;
 }
 
@@ -204,12 +204,12 @@ unsigned char fetchATByte(unsigned char idx) {
  */
 void loadTiles(void) {
   // Declare index used to address color in the color palette.
-  unsigned char idx;
+  uint8_t idx;
   int offset;
   // Iterate through the size of the attribute table, in bytes.
-  for (unsigned char i = 0; i < 64; i++) {
+  for (uint8_t i = 0; i < 64; i++) {
     // Iterate though the number of tiles per byte of the attribute table.
-    for (unsigned char j = 0; j < 16; j++) { 
+    for (uint8_t j = 0; j < 16; j++) { 
       // Define the pointer to the SDL_Texture representing the tile.
       SDL_Texture * tile = SDL_CreateTexture(display.renderer,
         SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 
@@ -273,7 +273,7 @@ void loadTiles(void) {
  *             two bits evaluated. The lower two bits are added to this
  *             value in the function to complete the four bit index.
  */
-void getPatternData(SDL_Texture * tile, int offset, unsigned char idx) {
+void getPatternData(SDL_Texture * tile, int offset, uint8_t idx) {
   // Flattened array pointer to contain pixel data.
   uint32_t * pixels;
   int pitch;
@@ -286,12 +286,12 @@ void getPatternData(SDL_Texture * tile, int offset, unsigned char idx) {
   
   // Define a variable that holds that two most significant bits
   // of the four bit index.
-  unsigned char upperBits = idx;
+  uint8_t upperBits = idx;
   // Iterate through each byte in a tile from the pattern table.
   for (int row = 0; row < TILE_LEN; row++) {
     // Get two dependent bytes from the tile.
-    unsigned char b1 = pTable0[offset+row];
-    unsigned char b2 = pTable0[offset+row+TILE_LEN];
+    uint8_t b1 = pTable0[offset+row];
+    uint8_t b2 = pTable0[offset+row+TILE_LEN];
 
     // Iterate through each bit of the specified bytes.
     for (int col = TILE_LEN-1; col >= 0; col--) {
@@ -335,7 +335,7 @@ void presentScene(void)
  * Checks and handles any SDL event that occurs
  * during runtime of the program.
  */
-unsigned char handleEvent(void) {
+uint8_t handleEvent(void) {
   SDL_Event event;
 
   while (SDL_PollEvent(&event))
@@ -359,7 +359,7 @@ unsigned char handleEvent(void) {
  * Also checks for user events that occur
  * such as closing the display window.
  */
-unsigned char runDisplay(void)
+uint8_t runDisplay(void)
 {
 	prepareScene();
 	if (!handleEvent()) return 1;

@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 #include "memory.h"
 #include "registers.h"
 #include "MMC1.h"
@@ -7,13 +9,13 @@
 extern struct registers regs;
 
 // Declaring components of CPU memory. 
-unsigned char ram[0x0800];
+uint8_t ram[0x0800];
 extern MemoryMappedRegisters ppu_registers;
-unsigned char apu_io_reg[0x0020];
-unsigned char exp_rom[0x1FDF];
-unsigned char sram[0x2000];
-unsigned char prg_rom_lower[0x4000];
-unsigned char prg_rom_upper[0x4000];
+uint8_t apu_io_reg[0x0020];
+uint8_t exp_rom[0x1FDF];
+uint8_t sram[0x2000];
+uint8_t prg_rom_lower[0x4000];
+uint8_t prg_rom_upper[0x4000];
 
 /**
  * Obtains a byte of data from the CPU memory.
@@ -22,7 +24,7 @@ unsigned char prg_rom_upper[0x4000];
  *
  * @returns: Value at address in CPU memory.
  */
-unsigned char readByte(unsigned short addr) {
+uint8_t readByte(unsigned short addr) {
   // Mirroring occurs from $2000-$2007 to $2008-$4000.
   if (addr >= 0x2008 && addr < 0x4000) {
     addr = 0x2000 + (addr % 0x0008);
@@ -54,7 +56,7 @@ unsigned char readByte(unsigned short addr) {
         return ppu_registers.PPUAddress;
       case 0x2007:
         {
-        unsigned char val = readPictureByte(ppu_registers.PPUWriteLatch);
+        uint8_t val = readPictureByte(ppu_registers.PPUWriteLatch);
         ppu_registers.PPUWriteLatch += getBit(ppu_registers.PPUControl, 2) ? 32 : 1;
         return val;
         }
@@ -93,7 +95,7 @@ unsigned char readByte(unsigned short addr) {
  *
  * @returns: Value in CPU RAM based on given address.
  */
-unsigned char readZeroPage(unsigned char addr) {
+uint8_t readZeroPage(unsigned char addr) {
   return ram[addr];
 }
 
@@ -104,7 +106,7 @@ unsigned char readZeroPage(unsigned char addr) {
  * @param addr: Desired address in CPU memory.
  * @param val: Desired value to write into CPU memory.
  */
-void writeByte (unsigned short addr, unsigned char val) {
+void writeByte (unsigned short addr, uint8_t val) {
   // Mirroring occurs from $2000-$2007 to $2008-$4000.
   if (addr >= 0x2008 && addr < 0x4000) {
     addr = 0x2000 + (addr % 0x0008);
@@ -179,7 +181,7 @@ void writeByte (unsigned short addr, unsigned char val) {
  * @param val: Value that should be written to the
  *             specified address in the CPU RAM.
  */
-void writeZeroPage(unsigned char addr, unsigned char val) {
+void writeZeroPage(uint8_t addr, unsigned char val) {
   ram[addr] = val;
 }
 
@@ -190,7 +192,7 @@ void writeZeroPage(unsigned char addr, unsigned char val) {
  * 
  * @returns: Top element on the CPU stack.
  */
-unsigned char popStack(void) {
+uint8_t popStack(void) {
   return ram[--regs.sp];
 }
 
@@ -201,7 +203,7 @@ unsigned char popStack(void) {
  *
  * @param val: Value to place on top of the CPU stack.
  */
-void pushStack(unsigned char val) {
+void pushStack(uint8_t val) {
   ram[regs.sp++] = val;
 }
 

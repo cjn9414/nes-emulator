@@ -1,4 +1,5 @@
 // MMC1 memory mapper formally known as SxROM
+#include <stdint.h>
 
 #include "mappers.h"
 #include "cpu.h"
@@ -8,11 +9,11 @@
 
 extern struct MMC1 mmc1;
 extern struct Header head;
-extern unsigned char prg_rom_lower[0x4000];
-extern unsigned char prg_rom_upper[0x4000];
+extern uint8_t prg_rom_lower[0x4000];
+extern uint8_t prg_rom_upper[0x4000];
 
-extern unsigned char pTable0[0x1000];
-extern unsigned char pTable1[0x1000];
+extern uint8_t pTable0[0x1000];
+extern uint8_t pTable1[0x1000];
 
 extern NameTable nTable0;
 extern NameTable nTable1;
@@ -22,8 +23,8 @@ extern NameTable nTable3;
 extern struct PPU ppu;
 
 // Declare pointers to the cartridge PRG ROM and CHR ROM.
-extern unsigned char * programData;
-extern unsigned char * graphicData;
+extern uint8_t * programData;
+extern uint8_t * graphicData;
 
 
 /**
@@ -55,7 +56,7 @@ void mmc1Reset(void) {
  */
 
 
-void mmc1Write(unsigned short addr, unsigned char val) {
+void mmc1Write(unsigned short addr, uint8_t val) {
   if (getBit(val, 7)) mmc1Reset();
  
  // Fifth bit write, shift and then load shift register
@@ -89,7 +90,7 @@ void mmc1Write(unsigned short addr, unsigned char val) {
  * @param p: program data pointer.
  * @param g: graphical data pointer.
  */
-unsigned char MMC1Setup(void) {
+uint8_t MMC1Setup(void) {
   mmc1.mainControl = mmc1.mainControl | 0b00000100;
   mmc1Reset();
   return 1;
@@ -105,9 +106,9 @@ unsigned char MMC1Setup(void) {
  * @param pTablePtr0: Pointer to the start of the first pattern table.
  * @param pTablePtr1: Pointer to the start of the second pattern table.
  */
-void loadChrBanks(unsigned char * pTablePtr0, unsigned char * pTablePtr1) {
+void loadChrBanks(uint8_t * pTablePtr0, unsigned char * pTablePtr1) {
   // Declare and initialize variables to access memory.
-  unsigned char bankNumber = mmc1.chrBank0 & 0b00011111;
+  uint8_t bankNumber = mmc1.chrBank0 & 0b00011111;
   unsigned long addrStart = 8*KB*bankNumber;
   
   // This will load two separate 4 KB banks into memory.
@@ -134,7 +135,7 @@ void loadChrBanks(unsigned char * pTablePtr0, unsigned char * pTablePtr1) {
  */
 void loadProgramBank() {
   // Declare and initialize variables to access memory.
-  unsigned char bankNumber = mmc1.prgBank & 0b00001111;
+  uint8_t bankNumber = mmc1.prgBank & 0b00001111;
   unsigned long addrStart = 16*KB*bankNumber;
 
   // One 16 KB bank is loaded into memory

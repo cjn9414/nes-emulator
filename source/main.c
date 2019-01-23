@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #include "mappers.h"
 #include "main.h"
@@ -14,8 +15,8 @@ struct Header head;
 struct MMC1 mmc1;
 
 // Declare pointers to cartridge data.
-unsigned char * programData;
-unsigned char * graphicData;
+uint8_t * programData;
+uint8_t * graphicData;
 
 
 /**
@@ -29,38 +30,38 @@ signed char loadHeader(FILE *file, struct Header* head) {
   // Declaring variables that will contain data from
   // the .nes file, which can then be fed into the 
   // attributes of the struct Header instance.
-  unsigned char inspectByte;
-  unsigned char format[3];
+  uint8_t inspectByte;
+  uint8_t format[3];
   
   // Copies data from file into previously declared variable.
-  fread(format, sizeof(unsigned char), 3, file);
+  fread(format, sizeof(uint8_t), 3, file);
   
   // All .nes formats must begin with "NES".
   if (strcmp(format, "NES") != 0) return -1;
   
   // Loads byte from file into inspection byte, checking for file legitimacy.
-  fread(&inspectByte, sizeof(unsigned char), 1, file);
+  fread(&inspectByte, sizeof(uint8_t), 1, file);
   if (inspectByte != 0x1A) return -1;
 
   // Loads the number of 16 KB PRG banks and 8 KB CHR banks
   // from the header into the respective variables.
-  fread(&(head->n_prg_banks), sizeof(unsigned char), 1, file);
-  fread(&(head->n_chr_banks), sizeof(unsigned char), 1, file);
+  fread(&(head->n_prg_banks), sizeof(uint8_t), 1, file);
+  fread(&(head->n_chr_banks), sizeof(uint8_t), 1, file);
   
   // Loads byte from file into inspection byte.
   // Bits of inspection byte are then looked at
-  fread(&inspectByte, sizeof(unsigned char), 1, file);
+  fread(&inspectByte, sizeof(uint8_t), 1, file);
   head->mirror = (inspectByte & 1);                 // first bit
   head->batteryRamBit = (inspectByte & (1 << 1) );  // second bit
   head->trainerBit = (inspectByte & (1 << 2) );     // third bit
   head->fourScreenBit = (inspectByte & (1 << 3) );  // fourth bit
   head->mapperNumber = inspectByte >> 4;            // four most significant bits
   
-  fread(&inspectByte, sizeof(unsigned char), 1, file);
+  fread(&inspectByte, sizeof(uint8_t), 1, file);
   head->mapperNumber += (inspectByte & 0xF0); // four most significant bits
 
   // Load the number of 8 KB PRG RAM  (0 indicates 8 KB).
-  fread(&(head->n_ram_banks), sizeof(unsigned char), 1, file);
+  fread(&(head->n_ram_banks), sizeof(uint8_t), 1, file);
   
   // Move file pointer to the end of the header.
   // The remainder of the header contains no information.
@@ -74,7 +75,7 @@ signed char loadHeader(FILE *file, struct Header* head) {
  * Will call the proper function to setup the memory mapper.
  */
 void mapperSetup(void) {
-  unsigned char success;
+  uint8_t success;
   switch(head.mapperNumber) {
     case 0:
       success = NROMSetup();
@@ -139,17 +140,17 @@ int main(int argc, char **argv) {
   // Declare the ROM data that will be copied from the .nes file.
   programData = malloc(16*KB*head.n_prg_banks);
   graphicData = malloc(8*KB*head.n_chr_banks);
-  unsigned char * trainer;
+  uint8_t * trainer;
   
   // If the trainer exists in the file, load it into the array.
   if (head.trainerBit) {
     trainer = malloc(512);
-    fread(trainer, sizeof(unsigned char), 512, file); 
+    fread(trainer, sizeof(uint8_t), 512, file); 
   }
   
   // Load the program and graphic data into the respective arrays.
-  fread(programData, sizeof(unsigned char), 16*KB*head.n_prg_banks, file);
-  fread(graphicData, sizeof(unsigned char), 8*KB*head.n_chr_banks, file);
+  fread(programData, sizeof(uint8_t), 16*KB*head.n_prg_banks, file);
+  fread(graphicData, sizeof(uint8_t), 8*KB*head.n_chr_banks, file);
   
   // Terminate the file pointer.
   fclose(file);
@@ -163,7 +164,7 @@ int main(int argc, char **argv) {
   // Run the emulator display and perform CPU step.
   while (1) {
     step();
-    unsigned char displayClosed = runDisplay();
+    uint8_t displayClosed = runDisplay();
     if (displayClosed) break;
 
   }
