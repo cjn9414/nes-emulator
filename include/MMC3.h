@@ -1,6 +1,8 @@
 #ifndef MMC3_H
 #define MMC3_H
 
-unsigned char MMC3Setup(void);
+#include <stdint.h>
+
+uint8_t MMC3Setup(void);
 
 #endif

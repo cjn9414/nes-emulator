@@ -10,10 +10,10 @@ enum AddressMode{ ZERO_PAGE, ZERO_PAGE_X, ZERO_PAGE_Y,
                    ACCUMULATOR,
                    INVALID };
 
-typedef void (*FunctionExecute)(unsigned char, unsigned char);
+typedef void (*FunctionExecute)(uint8_t, uint8_t);
 
 struct opcode {
-  unsigned char code[3];
+  uint8_t code[3];
   enum AddressMode addrMode;
   u_int8_t operands;
 } extern const opcodes[256];

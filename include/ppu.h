@@ -8,16 +8,16 @@ enum FrameStatus { VISIBLE, V_BLANK, POST_RENDER, PRE_RENDER };
 enum ScanlineStatus { STANDARD_FETCH, UNUSED_FETCH, H_BLANK, PRE_FETCH };
 
 typedef struct {
-  unsigned char tbl[32*30];
-  unsigned char attr[8*8];
+  uint8_t tbl[32*30];
+  uint8_t attr[8*8];
 } NameTable;
 
 struct color {
-  unsigned char rgb[3];
+  uint8_t rgb[3];
 } __attribute__((packed));
 
-void loadPPU(unsigned char *);
+void loadPPU(uint8_t *);
 
-unsigned char readPictureByte(unsigned short);
+uint8_t readPictureByte(uint16_t);
 
 #endif

@@ -1,13 +1,15 @@
 #ifndef REGISTERS_H
 #define REGISTERS_H
 
+#include <stdint.h>
+
 struct registers {
-  unsigned short pc;
-  unsigned char sp;
-  unsigned char p;
-  unsigned char a;
-  unsigned char x;
-  unsigned char y;
+  uint16_t pc;
+  uint8_t sp;
+  uint8_t p;
+  uint8_t a;
+  uint8_t x;
+  uint8_t y;
 };
 
 void registerPowerup(struct registers*);

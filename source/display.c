@@ -176,7 +176,7 @@ void pushByteOntoDisplay(SDL_Rect * block, uint8_t row, SDL_Texture * texture) {
  * 
  * @param idx: offset in bytes from the start of the name table.
  */
-uint8_t fetchNTByte(unsigned char idx) {
+uint8_t fetchNTByte(uint8_t idx) {
   return;
 }
 
@@ -187,7 +187,7 @@ uint8_t fetchNTByte(unsigned char idx) {
  * @param idx: offset in bytes from the start of the
  *             attribute table.
  */
-uint8_t fetchATByte(unsigned char idx) {
+uint8_t fetchATByte(uint8_t idx) {
   return;
 }
 

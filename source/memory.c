@@ -24,7 +24,7 @@ uint8_t prg_rom_upper[0x4000];
  *
  * @returns: Value at address in CPU memory.
  */
-uint8_t readByte(unsigned short addr) {
+uint8_t readByte(uint16_t addr) {
   // Mirroring occurs from $2000-$2007 to $2008-$4000.
   if (addr >= 0x2008 && addr < 0x4000) {
     addr = 0x2000 + (addr % 0x0008);
@@ -95,7 +95,7 @@ uint8_t readByte(unsigned short addr) {
  *
  * @returns: Value in CPU RAM based on given address.
  */
-uint8_t readZeroPage(unsigned char addr) {
+uint8_t readZeroPage(uint8_t addr) {
   return ram[addr];
 }
 
@@ -106,7 +106,7 @@ uint8_t readZeroPage(unsigned char addr) {
  * @param addr: Desired address in CPU memory.
  * @param val: Desired value to write into CPU memory.
  */
-void writeByte (unsigned short addr, uint8_t val) {
+void writeByte (uint16_t addr, uint8_t val) {
   // Mirroring occurs from $2000-$2007 to $2008-$4000.
   if (addr >= 0x2008 && addr < 0x4000) {
     addr = 0x2000 + (addr % 0x0008);
@@ -181,7 +181,7 @@ void writeByte (unsigned short addr, uint8_t val) {
  * @param val: Value that should be written to the
  *             specified address in the CPU RAM.
  */
-void writeZeroPage(uint8_t addr, unsigned char val) {
+void writeZeroPage(uint8_t addr, uint8_t val) {
   ram[addr] = val;
 }
 

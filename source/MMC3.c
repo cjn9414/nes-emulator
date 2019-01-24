@@ -1,6 +1,7 @@
 // MMC3 memory mapper formally known as CNROM.
 #include "mappers.h"
+#include <stdint.h>
 
-unsigned char MMC3Setup(void) {
+uint8_t MMC3Setup(void) {
   return 1;
 }

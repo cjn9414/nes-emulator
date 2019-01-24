@@ -56,7 +56,7 @@ void mmc1Reset(void) {
  */
 
 
-void mmc1Write(unsigned short addr, uint8_t val) {
+void mmc1Write(uint16_t addr, uint8_t val) {
   if (getBit(val, 7)) mmc1Reset();
  
  // Fifth bit write, shift and then load shift register
@@ -106,7 +106,7 @@ uint8_t MMC1Setup(void) {
  * @param pTablePtr0: Pointer to the start of the first pattern table.
  * @param pTablePtr1: Pointer to the start of the second pattern table.
  */
-void loadChrBanks(uint8_t * pTablePtr0, unsigned char * pTablePtr1) {
+void loadChrBanks(uint8_t * pTablePtr0, uint8_t * pTablePtr1) {
   // Declare and initialize variables to access memory.
   uint8_t bankNumber = mmc1.chrBank0 & 0b00011111;
   unsigned long addrStart = 8*KB*bankNumber;

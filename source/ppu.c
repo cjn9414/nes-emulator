@@ -184,7 +184,7 @@ void ppuStep(void) {
  *
  * @returns: Value of PPU memory at desired address.
  */
-uint8_t readPictureByte(unsigned short addr) {
+uint8_t readPictureByte(uint16_t addr) {
   // Mirroring occurs every 16 KB in PPU
   addr %= 0x4000;
   

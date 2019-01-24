@@ -1,6 +1,8 @@
 // MMC2 memory mapper formally known as UxROM.
 #include "mappers.h"
+#include <stdint.h>
 
-unsigned char MMC2Setup(void) {
+
+uint8_t MMC2Setup(void) {
   return 1;
 }

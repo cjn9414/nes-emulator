@@ -1,6 +1,8 @@
 #ifndef NROM_H
 #define NROM_H
 
-unsigned char NROMSetup(void);
+#include <stdint.h>
+
+uint8_t NROMSetup(void);
 
 #endif
