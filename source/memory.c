@@ -193,7 +193,7 @@ void writeZeroPage(uint8_t addr, uint8_t val) {
  * @returns: Top element on the CPU stack.
  */
 uint8_t popStack(void) {
-  return ram[--regs.sp];
+  return ram[regs.sp++];
 }
 
 
@@ -204,6 +204,6 @@ uint8_t popStack(void) {
  * @param val: Value to place on top of the CPU stack.
  */
 void pushStack(uint8_t val) {
-  ram[regs.sp++] = val;
+  ram[--regs.sp] = val;
 }
 

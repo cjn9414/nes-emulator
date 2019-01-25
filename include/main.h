@@ -20,4 +20,7 @@ signed char loadHeader(FILE*, struct Header*);
 unsigned char * cpuStartup(void);
 unsigned char * ppuStartup(void);
 
+uint8_t logger;
+FILE *logFile;
+
 #endif

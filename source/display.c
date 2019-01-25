@@ -162,11 +162,11 @@ void renderTiles(void) {
  * Loads a byte of pixel data onto the display. This is how NTSC
  * will display a picture onto a display.
  * 
- * @param block: 8x8 pixel block that stores the dimension of a tile.
+ * @param tileSize: 8x8 pixel block that stores the dimension of a tile.
  * @param row: 0-7 row from the top of the block that is being displayed.
  * @param texture: optimized pixel data that is being displayed.
  */
-void pushByteOntoDisplay(SDL_Rect * block, uint8_t row, SDL_Texture * texture) {
+void pushByteOntoDisplay(SDL_Rect * tileSize, uint8_t row, SDL_Texture * texture) {
   return;
 }
 

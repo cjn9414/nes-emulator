@@ -2,5 +2,7 @@
 *.o
 SDL2-2.0.9
 source/obj
+source/*.log
 branch_timing_tests/
 display
+cpu_exec_space

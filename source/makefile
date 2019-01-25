@@ -24,4 +24,4 @@ display: $(OBJ)
 .PHONY: clean
 
 clean:
-	rm -f $(ODIR)/*.o display *.gch
+	rm -f $(ODIR)/*.o display *.gch cpu.log

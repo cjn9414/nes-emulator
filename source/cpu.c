@@ -5,6 +5,7 @@
 #include "cpu.h"
 #include "memory.h"
 #include "registers.h"
+#include "main.h"
 
 #define KB 1024
 
@@ -65,6 +66,10 @@ void setFlagInterrupt(uint8_t bit) {
   regs.p = bit ? regs.p | 0b00000100 : regs.p & 0b11111011; 
 }
 
+void setFlagDecimal(uint8_t bit) {
+  regs.p = bit ? regs.p | 0b00001000 : regs.p & 0b11110111; 
+}
+
 void setFlagBreak(uint8_t bit) { 
   regs.p = bit ? regs.p | 0b00010000 : regs.p & 0b11101111;
 }
@@ -105,6 +110,8 @@ uint8_t getFlagZero(void) { return getBit(regs.p, 1); }
 
 uint8_t getFlagInterrupt(void) { return getBit(regs.p, 2); }
 
+uint8_t getFlagDecimal(void) { return getBit(regs.p, 3); }
+
 uint8_t getFlagBreak(void) { return getBit(regs.p, 4); }
 
 uint8_t getFlagOverflow(void) { return getBit(regs.p, 6); }
@@ -133,9 +140,11 @@ void VFlag(uint8_t a, uint8_t b, uint8_t c) {
  * @param val: Resolution to an instruction.
  */
 void SZFlags(uint8_t val) {
-  printf("%x", val);
   if (val == 0) setFlagZero(1);
-  else if (val >> 7) setFlagNegative(1);
+  else if (val >> 7) {
+    setFlagZero(0);
+    setFlagNegative(1);
+  }
   else {
     setFlagZero(0);
     setFlagNegative(0);
@@ -266,19 +275,19 @@ void and_ind_y(uint8_t val, uint8_t garb) {
   regs.a = val;
 }
 
-void and_imm(uint8_t val, uint8_t garb) {   //0x09
+void and_imm(uint8_t val, uint8_t garb) {
   val = regs.a & val;
   SZFlags(val);
   regs.a = val;
 }
 
-void and_zp(uint8_t val, uint8_t garb) {  //0x05
+void and_zp(uint8_t val, uint8_t garb) {
   val = readZeroPage(val) & regs.a;
   SZFlags(val);
   regs.a = val;
 }
 
-void and_zp_x(uint8_t val, uint8_t garb) {  // 0x15
+void and_zp_x(uint8_t val, uint8_t garb) {
   val = readZeroPage(val+regs.x) & regs.a;
   SZFlags(val);
   regs.a = val;
@@ -348,7 +357,7 @@ void bit_zp(uint8_t val, uint8_t garb) {
   val = readZeroPage(val);
   setFlagNegative(getBit(val, 7));
   setFlagOverflow(getBit(val, 6));
-  setFlagZero(val & regs.a);
+  setFlagZero(!(val & regs.a));
 }
 
 void bit_abs(uint8_t lower, uint8_t upper) {
@@ -356,7 +365,7 @@ void bit_abs(uint8_t lower, uint8_t upper) {
   lower = readByte(addr);
   setFlagNegative(getBit(lower, 7));
   setFlagOverflow(getBit(lower, 6));
-  setFlagZero(lower & regs.a);
+  setFlagZero(!(lower & regs.a));
 }
 
 void bpl(uint8_t val, uint8_t garb) {  
@@ -411,8 +420,9 @@ void cmp_imm(uint8_t val, uint8_t garb) {
   if (regs.a > val) {
     setFlagCarry(1);
   } else if (regs.a == val) {
+    setFlagCarry(1);
     setFlagZero(1);
-  } else setFlagNegative(1);
+  } else { setFlagNegative(1); }
 }
 
 void cmp_zp(uint8_t val, uint8_t garb) {
@@ -420,6 +430,7 @@ void cmp_zp(uint8_t val, uint8_t garb) {
   if (regs.a > val) {
     setFlagCarry(1);
   } else if (regs.a == val) {
+    setFlagCarry(1);
     setFlagZero(1);
   } else setFlagNegative(1);
 }
@@ -429,6 +440,7 @@ void cmp_zp_x(uint8_t val, uint8_t garb) {
   if (regs.a > val) {
     setFlagCarry(1);
   } else if (regs.a == val) {
+    setFlagCarry(1);
     setFlagZero(1);
   } else setFlagNegative(1);
 }
@@ -440,6 +452,7 @@ void cmp_ind_x(uint8_t val, uint8_t garb) {
   if (regs.a > val) {
     setFlagCarry(1);
   } else if (regs.a == val) {
+    setFlagCarry(1);
     setFlagZero(1);
   } else setFlagNegative(1);
 }
@@ -451,6 +464,7 @@ void cmp_ind_y(uint8_t val, uint8_t garb) {
   if (regs.a > val) {
     setFlagCarry(1);
   } else if (regs.a == val) {
+    setFlagCarry(1);
     setFlagZero(1);
   } else setFlagNegative(1);
 }
@@ -461,6 +475,7 @@ void cmp_abs(uint8_t lower, uint8_t upper) {
   if (regs.a > lower) {
     setFlagCarry(1);
   } else if (regs.a == lower) {
+    setFlagCarry(1);
     setFlagZero(1);
   } else setFlagNegative(1);
 }
@@ -471,6 +486,7 @@ void cmp_abs_x(uint8_t lower, uint8_t upper) {
   if (regs.a > lower) {
     setFlagCarry(1);
   } else if (regs.a == lower) {
+    setFlagCarry(1);
     setFlagZero(1);
   } else setFlagNegative(1);
 }
@@ -481,6 +497,7 @@ void cmp_abs_y(uint8_t lower, uint8_t upper) {
   if (regs.a > lower) {
     setFlagCarry(1);
   } else if (regs.a == lower) {
+    setFlagCarry(1);
     setFlagZero(1);
   } else setFlagNegative(1);
 }
@@ -489,6 +506,7 @@ void cpx_imm(uint8_t val, uint8_t garb) {
   if (regs.x > val) {
     setFlagCarry(1);
   } else if (regs.x == val) {
+    setFlagCarry(1);
     setFlagZero(1);
   } else setFlagNegative(1);
 }
@@ -498,6 +516,7 @@ void cpx_zp(uint8_t val, uint8_t garb) {
   if (regs.x > val) {
     setFlagCarry(1);
   } else if (regs.x == val) {
+    setFlagCarry(1);
     setFlagZero(1);
   } else setFlagNegative(1);
 }
@@ -508,6 +527,7 @@ void cpx_abs(uint8_t lower, uint8_t upper) {
   if (regs.x > lower) {
     setFlagCarry(1);
   } else if (regs.x == lower) {
+    setFlagCarry(1);
     setFlagZero(1);
   } else setFlagNegative(1);
 }
@@ -516,6 +536,7 @@ void cpy_imm(uint8_t val, uint8_t garb) {
   if (regs.y > val) {
     setFlagCarry(1);
   } else if (regs.y == val) {
+    setFlagCarry(1);
     setFlagZero(1);
   } else setFlagNegative(1);
 }
@@ -525,6 +546,7 @@ void cpy_zp(uint8_t val, uint8_t garb) {
   if (regs.y > val) {
     setFlagCarry(1);
   } else if (regs.y == val) {
+    setFlagCarry(1);
     setFlagZero(1);
   } else setFlagNegative(1);
 }
@@ -535,6 +557,7 @@ void cpy_abs(uint8_t lower, uint8_t upper) {
   if (regs.y > lower) {
     setFlagCarry(1);
   } else if (regs.y == lower) {
+    setFlagCarry(1);
     setFlagZero(1);
   } else setFlagNegative(1);
 }
@@ -619,9 +642,9 @@ void sei(uint8_t garb0, uint8_t garb1) { setFlagInterrupt(1); }
 
 void clv(uint8_t garb0, uint8_t garb1) { setFlagOverflow(0); }
 
-void cld(uint8_t garb0, uint8_t garb1) { return; }
+void cld(uint8_t garb0, uint8_t garb1) { setFlagDecimal(0); }
 
-void sed(uint8_t garb0, uint8_t garb1) { return; }
+void sed(uint8_t garb0, uint8_t garb1) { setFlagDecimal(1); }
 
 void inc_zp(uint8_t addr, uint8_t garb) {
   regs.pc += readZeroPage(addr);
@@ -665,101 +688,119 @@ void jsr(uint8_t lower, uint8_t upper) {
 void ldx_imm(uint8_t addr, uint8_t garb) {
   regs.x = addr;
   SZFlags(regs.x);
+  setFlagNegative(getBit(regs.x, 7));
 }
 
 void ldx_zp(uint8_t addr, uint8_t garb) {
   regs.x = readZeroPage(addr);
   SZFlags(regs.x);
+  setFlagNegative(getBit(regs.x, 7));
 }
 
 void ldx_zp_y(uint8_t addr, uint8_t garb) {
   regs.x = readZeroPage(addr + regs.y);
   SZFlags(regs.x);
+  setFlagNegative(getBit(regs.x, 7));
 }
 
 void ldx_abs(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower;
   regs.x = readByte(addr);
   SZFlags(regs.x);
+  setFlagNegative(getBit(regs.x, 7));
 }
 
 void ldx_abs_y(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower + regs.y;
   regs.x = readByte(addr);
   SZFlags(regs.x);
+  setFlagNegative(getBit(regs.x, 7));
 }
 
 void ldy_imm(uint8_t addr, uint8_t garb) {
   regs.y = addr;
   SZFlags(regs.y);
+  setFlagNegative(getBit(regs.y, 7));
 }
 
 void ldy_zp(uint8_t addr, uint8_t garb) {
   regs.y = readZeroPage(addr);
   SZFlags(regs.y);
+  setFlagNegative(getBit(regs.y, 7));
 }
 
 void ldy_zp_x(uint8_t addr, uint8_t garb) {
   regs.y = readZeroPage(addr + regs.x);
   SZFlags(regs.y);
+  setFlagNegative(getBit(regs.y, 7));
 }
 
 void ldy_abs(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower;
   regs.y = readByte(addr);
   SZFlags(regs.y);
+  setFlagNegative(getBit(regs.y, 7));
 }
 
 void ldy_abs_x(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower + regs.x;
   regs.y = readByte(addr);
   SZFlags(regs.y);
+  setFlagNegative(getBit(regs.y, 7));
 }
 
 
 void lda_imm(uint8_t addr, uint8_t garb) {
   regs.a = addr;
   SZFlags(regs.a);
+  setFlagNegative(getBit(regs.a, 7));
 }
 
 void lda_zp(uint8_t addr, uint8_t garb) {
   regs.a = readZeroPage(addr);
   SZFlags(regs.a);
+  setFlagNegative(getBit(regs.a, 7));
 }
 
 void lda_zp_x(uint8_t addr, uint8_t garb) {
   regs.a = readZeroPage(addr + regs.x);
   SZFlags(regs.a);
+  setFlagNegative(getBit(regs.a, 7));
 }
 
 void lda_abs(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower;
   regs.a = readByte(addr);
   SZFlags(regs.a);
+  setFlagNegative(getBit(regs.a, 7));
 }
 
 void lda_abs_x(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower + regs.x;
   regs.a = readByte(addr);
   SZFlags(regs.a);
+  setFlagNegative(getBit(regs.a, 7));
 }
 
 void lda_abs_y(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower + regs.y;
   regs.a = readByte(addr);
   SZFlags(regs.a);
+  setFlagNegative(getBit(regs.a, 7));
 }
 
 void lda_ind_x(uint8_t val, uint8_t garb) {
   uint16_t addr = (readZeroPage(val + regs.x + 1) << 8) + readZeroPage(val + regs.x);
   regs.a = readByte(addr);
   SZFlags(regs.a);
+  setFlagNegative(getBit(regs.a, 7));
 }
 
 void lda_ind_y(uint8_t val, uint8_t garb) {
   uint16_t addr = (readZeroPage(val + 1) << 8) + readZeroPage(val);
   regs.a = readByte(addr + regs.y);
   SZFlags(regs.a);
+  setFlagNegative(getBit(regs.a, 7));
 }
 
 void lsr_acc(uint8_t garb0, uint8_t garb1) { 
@@ -1000,7 +1041,7 @@ void rti(uint8_t garb0, uint8_t garb1) {
 void rts(uint8_t garb0, uint8_t garb1) {
   uint16_t addr = (unsigned short) popStack();
   addr += ((uint16_t) popStack()) << 8;
-  regs.pc = addr + 1;
+  regs.pc = addr;
 }
 
 void sbc_imm(uint8_t val, uint8_t garbage) {
@@ -1123,17 +1164,29 @@ void sta_abs_y(uint8_t lower, uint8_t upper) {
   writeByte(addr, regs.a);
 }
 
-void txs(uint8_t garb0, uint8_t garb1) { regs.sp = regs.x; }
+void txs(uint8_t garb0, uint8_t garb1) { 
+  regs.sp = regs.x;
+  SZFlags(regs.sp);
+}
 
-void tsx(uint8_t garb0, uint8_t garb1) { regs.x = regs.sp; }
+void tsx(uint8_t garb0, uint8_t garb1) {
+  regs.x = regs.sp;
+  SZFlags(regs.x);
+}
 
 void pha(uint8_t garb0, uint8_t garb1) { pushStack(regs.a); }
 
-void pla(uint8_t garb0, uint8_t garb1) { regs.a = popStack(); }
+void pla(uint8_t garb0, uint8_t garb1) { 
+  regs.a = popStack();
+  SZFlags(regs.a);
+}
 
 void php(uint8_t garb0, uint8_t garb1) { pushStack(regs.p); }
 
-void plp(uint8_t garb0, uint8_t garb1) { regs.p = popStack(); }
+void plp(uint8_t garb0, uint8_t garb1) { 
+  regs.p = popStack();
+  SZFlags(regs.p);
+}
 
 void stx_zp(uint8_t val, uint8_t garb) { writeZeroPage(val, regs.x); }
 
@@ -1466,11 +1519,14 @@ void step(void) {
   uint8_t opcode = readByte(regs.pc);
   uint8_t time = cycles[opcode];
   uint8_t len = opcodes[opcode].operands;
-  uint8_t * opName = opcodes[opcode].code;
+  unsigned char * opName = opcodes[opcode].code;
   uint8_t arg1, arg2;
   arg1 = readByte(regs.pc + 1);
   arg2 = readByte(regs.pc + 2);
-  printf("%s(%x) %x %x\n", opName, opcode, arg1, arg2);
+  if (logger) {
+    fprintf(logFile, "%x, %x %x %x %s  A:%x X:%x Y:%x P:%x SP:%x\n",
+      regs.pc, opcode, arg1, arg2, opName, regs.a, regs.x, regs.y, regs.p, regs.sp); 
+  }
   functions[opcode](arg1, arg2);
   regs.pc += (strcmp(opName, "JSR") != 0 && strcmp(opName, "JMP") != 0) ? len : 0;
 }

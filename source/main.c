@@ -18,7 +18,6 @@ struct MMC1 mmc1;
 uint8_t * programData;
 uint8_t * graphicData;
 
-
 /**
  * Called once from the main function to
  * load data from the .nes file into the header struct.
@@ -115,9 +114,15 @@ int main(int argc, char **argv) {
 
   // This program is expected to be ran with the .nes filename as an argument.
   // Running this program with no arguments, or more than one will result in an error.
-  if (argc != 2) {
-    printf("Error: Expected 2 arguments; %d were given.\n", argc);
+  if (argc < 2) {
+    printf("Error: Expected at least 2 arguments; %d were given.\n", argc);
     exit(1);
+  } else if (argc >= 3) {
+    if (!strcmp(argv[2], "-l")) {
+      logger = 1;
+      logFile = fopen("cpu.log", "w");
+      freopen(NULL, "w+", logFile);
+    } else logger = 0;
   }
   
   // Initializing file pointer based on program argument.
@@ -160,12 +165,12 @@ int main(int argc, char **argv) {
   mapperSetup();
   registerPowerup(&regs);
   // Initialize the picture display.
-  displayInit();
+  //displayInit();
   // Run the emulator display and perform CPU step.
   while (1) {
     step();
-    uint8_t displayClosed = runDisplay();
-    if (displayClosed) break;
+    //uint8_t displayClosed = runDisplay();
+    //if (displayClosed) break;
 
   }
   // Free dynamically allocated memory.
