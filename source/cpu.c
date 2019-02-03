@@ -118,6 +118,18 @@ uint8_t getFlagOverflow(void) { return getBit(regs.p, 6); }
 
 uint8_t getFlagNegative(void) { return getBit(regs.p, 7); }
 
+/**
+ * Helper function to set flags with all compare functions.
+ * 
+ * @param a: primary value of comparison to compare function.
+ * @param b: operand to compare function.
+ */
+void flagCompare(uint8_t a, uint8_t b) {
+  SZFlags(a - b);
+  if (a >= b) {
+    setFlagCarry(1);
+  } else { setFlagCarry(0); }
+}
 
 /**
  * Determines if the overflag should be set after an instruction.
@@ -419,149 +431,79 @@ void beq(uint8_t val, uint8_t garb) {
 }
 
 void cmp_imm(uint8_t val, uint8_t garb) {
-  if (regs.a > val) {
-    setFlagCarry(1);
-  } else if (regs.a == val) {
-    setFlagCarry(1);
-    setFlagZero(1);
-  } else { setFlagNegative(1); }
+  flagCompare(regs.a, val);
 }
 
 void cmp_zp(uint8_t val, uint8_t garb) {
   val = readZeroPage(val);
-  if (regs.a > val) {
-    setFlagCarry(1);
-  } else if (regs.a == val) {
-    setFlagCarry(1);
-    setFlagZero(1);
-  } else setFlagNegative(1);
+  flagCompare(regs.a, val);
 }
 
 void cmp_zp_x(uint8_t val, uint8_t garb) {
   val = readZeroPage(val + regs.x);
-  if (regs.a > val) {
-    setFlagCarry(1);
-  } else if (regs.a == val) {
-    setFlagCarry(1);
-    setFlagZero(1);
-  } else setFlagNegative(1);
+  flagCompare(regs.a, val);
 }
 
 void cmp_ind_x(uint8_t val, uint8_t garb) {
   uint16_t addr;
   addr = (readZeroPage(val + regs.x + 1) << 8) + readZeroPage(val + regs.x);
   val = readByte(addr);
-  if (regs.a > val) {
-    setFlagCarry(1);
-  } else if (regs.a == val) {
-    setFlagCarry(1);
-    setFlagZero(1);
-  } else setFlagNegative(1);
+  flagCompare(regs.a, val);
 }
 
 void cmp_ind_y(uint8_t val, uint8_t garb) {
   uint16_t addr;
   addr = (readZeroPage(val + 1) << 8) + readZeroPage(val);
   val = readByte(addr + regs.y);
-  if (regs.a > val) {
-    setFlagCarry(1);
-  } else if (regs.a == val) {
-    setFlagCarry(1);
-    setFlagZero(1);
-  } else setFlagNegative(1);
+  flagCompare(regs.a, val);
 }
 
 void cmp_abs(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower;
   lower = readByte(addr);
-  if (regs.a > lower) {
-    setFlagCarry(1);
-  } else if (regs.a == lower) {
-    setFlagCarry(1);
-    setFlagZero(1);
-  } else setFlagNegative(1);
+  flagCompare(regs.a, lower);
 }
 
 void cmp_abs_x(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower + regs.x;
   lower = readByte(addr);
-  if (regs.a > lower) {
-    setFlagCarry(1);
-  } else if (regs.a == lower) {
-    setFlagCarry(1);
-    setFlagZero(1);
-  } else setFlagNegative(1);
+  flagCompare(regs.a, lower);
 }
 
 void cmp_abs_y(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower + regs.y;
   lower = readByte(addr);
-  if (regs.a > lower) {
-    setFlagCarry(1);
-  } else if (regs.a == lower) {
-    setFlagCarry(1);
-    setFlagZero(1);
-  } else setFlagNegative(1);
+  flagCompare(regs.a, lower);
 }
 
 void cpx_imm(uint8_t val, uint8_t garb) {
-  if (regs.x > val) {
-    setFlagCarry(1);
-  } else if (regs.x == val) {
-    setFlagCarry(1);
-    setFlagZero(1);
-  } else setFlagNegative(1);
+  flagCompare(regs.x, val);
 }
 
 void cpx_zp(uint8_t val, uint8_t garb) {
   val = readZeroPage(val);
-  if (regs.x > val) {
-    setFlagCarry(1);
-  } else if (regs.x == val) {
-    setFlagCarry(1);
-    setFlagZero(1);
-  } else setFlagNegative(1);
+  flagCompare(regs.x, val);
 }
 
 void cpx_abs(uint8_t lower, uint8_t upper) {
   uint8_t addr = (upper << 8) + lower;
   lower = readByte(addr);
-  if (regs.x > lower) {
-    setFlagCarry(1);
-  } else if (regs.x == lower) {
-    setFlagCarry(1);
-    setFlagZero(1);
-  } else setFlagNegative(1);
+  flagCompare(regs.x, lower);
 }
 
 void cpy_imm(uint8_t val, uint8_t garb) {
-  if (regs.y > val) {
-    setFlagCarry(1);
-  } else if (regs.y == val) {
-    setFlagCarry(1);
-    setFlagZero(1);
-  } else setFlagNegative(1);
+  flagCompare(regs.y, val);
 }
 
 void cpy_zp(uint8_t val, uint8_t garb) {
   val = readZeroPage(val);
-  if (regs.y > val) {
-    setFlagCarry(1);
-  } else if (regs.y == val) {
-    setFlagCarry(1);
-    setFlagZero(1);
-  } else setFlagNegative(1);
+  flagCompare(regs.y, val);
 }
 
 void cpy_abs(uint8_t lower, uint8_t upper) {
   uint8_t addr = (upper << 8) + lower;
   lower = readByte(addr);
-  if (regs.y > lower) {
-    setFlagCarry(1);
-  } else if (regs.y == lower) {
-    setFlagCarry(1);
-    setFlagZero(1);
-  } else setFlagNegative(1);
+  flagCompare(regs.y, lower);
 }
 
 
@@ -910,13 +852,13 @@ void txa(uint8_t garb0, uint8_t garb1) {
 
 void dex(uint8_t garb0, uint8_t garb1) {
   regs.x--;
-  !~regs.x ? setFlagCarry(1) : setFlagCarry(0);
+  (regs.x >= 0 && regs.x < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
   SZFlags(regs.x);
 }
 
 void inx(uint8_t garb0, uint8_t garb1) {
   regs.x++;
-  !regs.x ? setFlagCarry(1) : setFlagCarry(0);
+  (regs.x >= 0 && regs.x < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
   SZFlags(regs.x);
 }
 
@@ -933,12 +875,13 @@ void tya(uint8_t garb0, uint8_t garb1) {
 void dey(uint8_t garb0, uint8_t garb1) { 
   regs.y--;
   !~regs.y ? setFlagCarry(1) : setFlagCarry(0);
+  (regs.y >= 0 && regs.y < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
   SZFlags(regs.y);
 }
 
 void iny(uint8_t garb0, uint8_t garb1) { 
   regs.y++;
-  !regs.y ? setFlagCarry(1) : setFlagCarry(0);
+  (regs.y >= 0 && regs.y < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
   SZFlags(regs.y);
 }
 
@@ -1035,88 +978,88 @@ void ror_abs_x(uint8_t lower, uint8_t upper) {
 }
 
 void rti(uint8_t garb0, uint8_t garb1) {
-  regs.p = popStack();
-  regs.pc = (uint16_t) popStack();
-  regs.pc = (regs.pc << 8) + (uint16_t) popStack();
+  regs.p = (popStack() & 0xEF) | 0x20;
+  regs.pc = popStack();
+  regs.pc += (uint16_t) (popStack() << 8);
 }
 
 void rts(uint8_t garb0, uint8_t garb1) {
-  uint16_t addr = (unsigned short) popStack();
-  addr += ((uint16_t) popStack()) << 8;
+  uint16_t addr = popStack();
+  addr += (uint16_t) (popStack() << 8);
   regs.pc = addr;
 }
 
 void sbc_imm(uint8_t val, uint8_t garbage) {
-  val = ~val + 1 + getFlagCarry();
-  garbage = val + regs.a;
+  val = ~val + 1;
+  garbage = val + regs.a - (getFlagCarry() ? 0 : 1);
   VFlag(val, regs.a, garbage);
-  garbage > regs.a ? setFlagCarry(1) : setFlagCarry(0);
   regs.a = garbage;
   SZFlags(regs.a);
+  (garbage >= 0 && garbage < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
 }
 
 void sbc_zp(uint8_t val, uint8_t garbage) {
-  val = ~readZeroPage(val) + 1 + getFlagCarry();
-  garbage = val + regs.a;
+  val = ~readZeroPage(val) + 1;
+  garbage = val + regs.a - (getFlagCarry() ? 0 : 1);
   VFlag(val, regs.a, garbage);
-  garbage > regs.a ? setFlagCarry(1) : setFlagCarry(0);
   regs.a = garbage;
   SZFlags(regs.a);
+  (garbage >= 0 && garbage < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
 }
 
 void sbc_zp_x(uint8_t val, uint8_t garbage) {
-  val = ~readZeroPage(regs.x + val) + 1 + getFlagCarry();  
-  garbage = val + regs.a;
+  val = ~readZeroPage(regs.x + val) + 1;  
+  garbage = val + regs.a - (getFlagCarry() ? 0 : 1);
   VFlag(val, regs.a, garbage);
-  garbage > regs.a ? setFlagCarry(1) : setFlagCarry(0);
   regs.a = garbage;
   SZFlags(regs.a);
+  (garbage >= 0 && garbage < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
 }
 
 void sbc_ind_x(uint8_t val, uint8_t garbage) {
   uint16_t addr;
   addr = readZeroPage(val + regs.x) + (readZeroPage(val + regs.x + 1) << 8);
-  val = ~readByte(addr) + 1 + getFlagCarry();
-  garbage = val + regs.a;
+  val = ~readByte(addr) + 1;
+  garbage = val + regs.a - (getFlagCarry() ? 0 : 1);
   VFlag(val, regs.a, garbage);
-  garbage > regs.a ? setFlagCarry(1) : setFlagCarry(0);
   regs.a = garbage;
   SZFlags(regs.a);
+  (garbage >= 0 && garbage < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
 }
 
 void sbc_ind_y(uint8_t val, uint8_t garbage) {
   uint16_t addr;
   addr = readZeroPage(val) + (readZeroPage(val + 1) << 8);
-  val = ~readByte(addr + regs.y) + 1 + getFlagCarry();
-  garbage = val + regs.a;
+  val = ~readByte(addr + regs.y) + 1;
+  garbage = val + regs.a - (getFlagCarry() ? 0 : 1);
   VFlag(val, regs.a, garbage);
-  garbage > regs.a ? setFlagCarry(1) : setFlagCarry(0);
   regs.a = garbage;
   SZFlags(regs.a);
+  (garbage >= 0 && garbage < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
 }
 
 void sbc_abs(uint8_t lower, uint8_t upper) {
   uint8_t res;
   uint16_t addr;
   addr = (upper << 8) + lower;
-  lower = ~readByte(addr) + 1 + getFlagCarry();
-  res = lower + regs.a;
+  lower = ~readByte(addr) + 1;
+  res = lower + regs.a - (getFlagCarry() ? 0 : 1);
   VFlag(lower, regs.a, res);
-  res > regs.a ? setFlagCarry(1) : setFlagCarry(0);
   regs.a = res;
   SZFlags(regs.a);
+  (res >= 0 && res < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
 }
 
 void sbc_abs_x(uint8_t lower, uint8_t upper) {
   uint8_t res;
   uint16_t addr;
   addr = (upper << 8) + lower + regs.x;
-  lower = ~readByte(addr) + 1 + getFlagCarry();
-  res = lower + regs.a;
+  lower = ~readByte(addr) + 1;
+  res = lower + regs.a - (getFlagCarry() ? 0 : 1);
   VFlag(lower, regs.a, res);
-  res > regs.a ? setFlagCarry(1) : setFlagCarry(0);
   regs.a = res;
   SZFlags(regs.a);
+  (res >= 0 && res < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
 }
 
 
@@ -1124,12 +1067,12 @@ void sbc_abs_y(uint8_t lower, uint8_t upper) {
   uint8_t res;
   uint16_t addr;
   addr = (upper << 8) + lower + regs.y;
-  lower = ~readByte(addr) + 1 + getFlagCarry();
-  res = lower + regs.a;
+  lower = ~readByte(addr) + 1;
+  res = lower + regs.a - (getFlagCarry() ? 0 : 1);
   VFlag(lower, regs.a, res);
-  res > regs.a ? setFlagCarry(1) : setFlagCarry(0);
   regs.a = res;
   SZFlags(regs.a);
+  (res >= 0 && res < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
 }
 
 
@@ -1168,7 +1111,6 @@ void sta_abs_y(uint8_t lower, uint8_t upper) {
 
 void txs(uint8_t garb0, uint8_t garb1) { 
   regs.sp = regs.x;
-  SZFlags(regs.sp);
 }
 
 void tsx(uint8_t garb0, uint8_t garb1) {
@@ -1194,7 +1136,7 @@ void stx_zp(uint8_t val, uint8_t garb) { writeZeroPage(val, regs.x); }
 void stx_zp_y(uint8_t val, uint8_t garb) { writeZeroPage(val+regs.y, regs.x); }
 
 void stx_abs(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (readByte(upper)) << 8 + readByte(lower);
+  uint16_t addr = (upper << 8) + lower;
   writeByte(addr, regs.x);
 }
 
@@ -1203,7 +1145,7 @@ void sty_zp(uint8_t val, uint8_t garb) { writeZeroPage(val, regs.y); }
 void sty_zp_x(uint8_t val, uint8_t garb) { writeZeroPage(val+regs.x, regs.y); }
 
 void sty_abs(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (readByte(upper) << 8) + readByte(lower);
+  uint16_t addr = (upper << 8) + lower;
   writeByte(addr, regs.y);
 }
 
@@ -1529,6 +1471,8 @@ void step(void) {
       regs.pc, opcode, arg1, arg2, opName, regs.a, regs.x, regs.y, regs.p, regs.sp); 
   }
   functions[opcode](arg1, arg2);
-  regs.pc += (strcmp(opName, "JSR") != 0 && strcmp(opName, "JMP") != 0) ? len : 0;
+  regs.pc += (strcmp(opName, "JSR") != 0 &&
+              strcmp(opName, "JMP") != 0 &&
+              strcmp(opName, "RTI") != 0) ? len : 0;
 }
 
