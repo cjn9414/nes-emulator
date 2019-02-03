@@ -140,8 +140,11 @@ void VFlag(uint8_t a, uint8_t b, uint8_t c) {
  * @param val: Resolution to an instruction.
  */
 void SZFlags(uint8_t val) {
-  if (val == 0) setFlagZero(1);
-  else if (val >> 7) {
+  if (val == 0) {
+    setFlagZero(1);
+    setFlagNegative(0);
+  }
+  else if (getBit(val, 7)) {
     setFlagZero(0);
     setFlagNegative(1);
   }
@@ -182,48 +185,47 @@ void nan(uint8_t garb0, uint8_t garb1) {
 void brk(uint8_t garb0, uint8_t garb1) { setFlagBreak(1); }  //0x00
 
 void adc_imm(uint8_t val, uint8_t res) {
-  val += getFlagCarry();
-  res = val + regs.a;
+  res = val + regs.a + getFlagCarry();
   VFlag(val, regs.a, res);
-  res > regs.a ? setFlagCarry(1) : setFlagCarry(0);
+  res < regs.a ? setFlagCarry(1) : setFlagCarry(0);
   regs.a = res;
   SZFlags(regs.a);
 }
 
 void adc_zp(uint8_t val, uint8_t res) {
-  val = readZeroPage(val) + getFlagCarry();
-  res = val + regs.a;
+  val = readZeroPage(val);
+  res = val + regs.a + getFlagCarry;
   VFlag(val, regs.a, res);
-  res > regs.a ? setFlagCarry(1) : setFlagCarry(0);
+  res < regs.a ? setFlagCarry(1) : setFlagCarry(0);
   regs.a = res;
   SZFlags(regs.a);
 }
 
 void adc_zp_x(uint8_t val, uint8_t res) {
-  val = readZeroPage(val + regs.x) + getFlagCarry();
-  res = val + regs.a;
+  val = readZeroPage(val + regs.x);
+  res = val + regs.a + getFlagCarry();
   VFlag(val, regs.a, res);
-  res > regs.a ? setFlagCarry(1) : setFlagCarry(0);
+  res < regs.a ? setFlagCarry(1) : setFlagCarry(0);
   regs.a = res;
   SZFlags(regs.a);
 }
 
 void adc_ind_x(uint8_t val, uint8_t res) {
   uint16_t addr = readZeroPage(val + regs.x) + (readZeroPage(val + regs.x + 1) << 8);
-  val = readByte(addr) + getFlagCarry();
-  res = val + regs.a;
+  val = readByte(addr);
+  res = val + regs.a + getFlagCarry();
   VFlag(val, regs.a, res);
-  res > regs.a ? setFlagCarry(1) : setFlagCarry(0);
+  res < regs.a ? setFlagCarry(1) : setFlagCarry(0);
   regs.a = res;
   SZFlags(regs.a);
 }
 
 void adc_ind_y(uint8_t val, uint8_t res) {
   uint16_t addr = readZeroPage(val) + (readZeroPage(val + 1) << 8);
-  val = readByte(addr + regs.y) + getFlagCarry();
-  res = val + regs.a;
+  val = readByte(addr + regs.y);
+  res = val + regs.a + getFlagCarry();
   VFlag(val, regs.a, res);
-  res > regs.a ? setFlagCarry(1) : setFlagCarry(0);
+  res < regs.a ? setFlagCarry(1) : setFlagCarry(0);
   regs.a = res;
   SZFlags(regs.a);
 }
@@ -231,10 +233,10 @@ void adc_ind_y(uint8_t val, uint8_t res) {
 void adc_abs(uint8_t lower, uint8_t upper) {
   uint8_t res;
   uint16_t addr = (upper << 8) + lower;
-  lower = readByte(addr) + getFlagCarry();
-  res = lower + regs.a;
+  lower = readByte(addr);
+  res = lower + regs.a + getFlagCarry();
   VFlag(lower, regs.a, res);
-  res > regs.a ? setFlagCarry(1) : setFlagCarry(0);
+  res < regs.a ? setFlagCarry(1) : setFlagCarry(0);
   regs.a = res;
   SZFlags(regs.a); 
 }
@@ -242,10 +244,10 @@ void adc_abs(uint8_t lower, uint8_t upper) {
 void adc_abs_x(uint8_t lower, uint8_t upper) {
   uint8_t res;
   uint16_t addr = (upper << 8) + lower + regs.x;
-  lower = readByte(addr) + getFlagCarry();
-  res = lower + regs.a;
+  lower = readByte(addr);
+  res = lower + regs.a + getFlagCarry();
   VFlag(lower, regs.a, res);
-  res > regs.a ? setFlagCarry(1) : setFlagCarry(0);
+  res < regs.a ? setFlagCarry(1) : setFlagCarry(0);
   regs.a = res;
   SZFlags(regs.a); 
 }
@@ -253,10 +255,10 @@ void adc_abs_x(uint8_t lower, uint8_t upper) {
 void adc_abs_y(uint8_t lower, uint8_t upper) {
   uint8_t res;
   uint16_t addr = (upper << 8) + lower + regs.y;
-  lower = readByte(addr) + getFlagCarry();
-  res = lower + regs.a;
+  lower = readByte(addr);
+  res = lower + regs.a + getFlagCarry();
   VFlag(lower, regs.a, res);
-  res > regs.a ? setFlagCarry(1) : setFlagCarry(0);
+  res < regs.a ? setFlagCarry(1) : setFlagCarry(0);
   regs.a = res;
   SZFlags(regs.a); 
 }
@@ -1181,11 +1183,10 @@ void pla(uint8_t garb0, uint8_t garb1) {
   SZFlags(regs.a);
 }
 
-void php(uint8_t garb0, uint8_t garb1) { pushStack(regs.p); }
+void php(uint8_t garb0, uint8_t garb1) { pushStack(regs.p | 0x10); }
 
 void plp(uint8_t garb0, uint8_t garb1) { 
-  regs.p = popStack();
-  SZFlags(regs.p);
+  regs.p = (popStack() & 0xEF) | 0x20;
 }
 
 void stx_zp(uint8_t val, uint8_t garb) { writeZeroPage(val, regs.x); }
