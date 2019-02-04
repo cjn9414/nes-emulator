@@ -206,7 +206,7 @@ void adc_imm(uint8_t val, uint8_t res) {
 
 void adc_zp(uint8_t val, uint8_t res) {
   val = readZeroPage(val);
-  res = val + regs.a + getFlagCarry;
+  res = val + regs.a + getFlagCarry();
   VFlag(val, regs.a, res);
   res < regs.a ? setFlagCarry(1) : setFlagCarry(0);
   regs.a = res;
@@ -509,25 +509,29 @@ void cpy_abs(uint8_t lower, uint8_t upper) {
 
 
 void dec_zp(uint8_t addr, uint8_t garb) {
-  regs.pc -= readZeroPage(addr);
-  SZFlags(regs.pc);
+  garb = readZeroPage(addr) - 1;
+  writeZeroPage(addr, garb);
+  SZFlags(garb);
 }
 
 void dec_zp_x(uint8_t addr, uint8_t garb) {
-  regs.pc -= readZeroPage(regs.x + addr);
-  SZFlags(regs.pc);
+  garb = readZeroPage(regs.x + addr) - 1;
+  writeZeroPage(addr, garb);
+  SZFlags(garb);
 }
 
 void dec_abs(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower;
-  regs.pc -= readByte(addr);
-  SZFlags(regs.pc);
+  lower = readByte(addr) - 1;
+  writeByte(addr, lower);
+  SZFlags(lower);
 }
 
 void dec_abs_x(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower + regs.x;
-  regs.pc -= readByte(addr);
-  SZFlags(regs.pc);
+  lower = readByte(addr) - 1;
+  writeByte(addr, lower);
+  SZFlags(lower);
 }
 
 void eor_imm(uint8_t val, uint8_t garb) {
@@ -591,25 +595,29 @@ void cld(uint8_t garb0, uint8_t garb1) { setFlagDecimal(0); }
 void sed(uint8_t garb0, uint8_t garb1) { setFlagDecimal(1); }
 
 void inc_zp(uint8_t addr, uint8_t garb) {
-  regs.pc += readZeroPage(addr);
-  SZFlags(regs.pc);
+  garb =  readZeroPage(addr) + 1;
+  writeZeroPage(addr, garb);
+  SZFlags(garb);
 }
 
 void inc_zp_x(uint8_t addr, uint8_t garb) {
-  regs.pc += readZeroPage(regs.x + addr);
-  SZFlags(regs.pc);
+  garb = readZeroPage(regs.x + addr) + 1;
+  writeZeroPage(addr, garb);
+  SZFlags(garb);
 }
 
 void inc_abs(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower;
-  regs.pc += readByte(addr);
-  SZFlags(regs.pc);
+  lower = readByte(addr) + 1;
+  writeByte(addr, lower);
+  SZFlags(lower);
 }
 
 void inc_abs_x(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower + regs.x;
-  regs.pc += readByte(addr);
-  SZFlags(regs.pc);
+  lower = readByte(addr) + 1;
+  writeByte(addr, lower);
+  SZFlags(lower);
 }
 
 void jmp_abs(uint8_t lower, uint8_t upper) {
@@ -852,13 +860,11 @@ void txa(uint8_t garb0, uint8_t garb1) {
 
 void dex(uint8_t garb0, uint8_t garb1) {
   regs.x--;
-  (regs.x >= 0 && regs.x < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
   SZFlags(regs.x);
 }
 
 void inx(uint8_t garb0, uint8_t garb1) {
   regs.x++;
-  (regs.x >= 0 && regs.x < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
   SZFlags(regs.x);
 }
 
@@ -874,14 +880,11 @@ void tya(uint8_t garb0, uint8_t garb1) {
 
 void dey(uint8_t garb0, uint8_t garb1) { 
   regs.y--;
-  !~regs.y ? setFlagCarry(1) : setFlagCarry(0);
-  (regs.y >= 0 && regs.y < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
   SZFlags(regs.y);
 }
 
 void iny(uint8_t garb0, uint8_t garb1) { 
   regs.y++;
-  (regs.y >= 0 && regs.y < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
   SZFlags(regs.y);
 }
 
@@ -990,8 +993,8 @@ void rts(uint8_t garb0, uint8_t garb1) {
 }
 
 void sbc_imm(uint8_t val, uint8_t garbage) {
-  val = ~val + 1;
-  garbage = val + regs.a - (getFlagCarry() ? 0 : 1);
+  val = ~val + 1 - (getFlagCarry() ? 0 : 1);
+  garbage = val + regs.a;
   VFlag(val, regs.a, garbage);
   regs.a = garbage;
   SZFlags(regs.a);
@@ -999,8 +1002,8 @@ void sbc_imm(uint8_t val, uint8_t garbage) {
 }
 
 void sbc_zp(uint8_t val, uint8_t garbage) {
-  val = ~readZeroPage(val) + 1;
-  garbage = val + regs.a - (getFlagCarry() ? 0 : 1);
+  val = ~readZeroPage(val) + 1 - (getFlagCarry() ? 0 : 1);
+  garbage = val + regs.a;
   VFlag(val, regs.a, garbage);
   regs.a = garbage;
   SZFlags(regs.a);
@@ -1008,8 +1011,8 @@ void sbc_zp(uint8_t val, uint8_t garbage) {
 }
 
 void sbc_zp_x(uint8_t val, uint8_t garbage) {
-  val = ~readZeroPage(regs.x + val) + 1;  
-  garbage = val + regs.a - (getFlagCarry() ? 0 : 1);
+  val = ~readZeroPage(regs.x + val) + 1 - (getFlagCarry() ? 0 : 1);  
+  garbage = val + regs.a;
   VFlag(val, regs.a, garbage);
   regs.a = garbage;
   SZFlags(regs.a);
@@ -1019,8 +1022,8 @@ void sbc_zp_x(uint8_t val, uint8_t garbage) {
 void sbc_ind_x(uint8_t val, uint8_t garbage) {
   uint16_t addr;
   addr = readZeroPage(val + regs.x) + (readZeroPage(val + regs.x + 1) << 8);
-  val = ~readByte(addr) + 1;
-  garbage = val + regs.a - (getFlagCarry() ? 0 : 1);
+  val = ~readByte(addr) + 1 - (getFlagCarry() ? 0 : 1);
+  garbage = val + regs.a;
   VFlag(val, regs.a, garbage);
   regs.a = garbage;
   SZFlags(regs.a);
@@ -1030,8 +1033,8 @@ void sbc_ind_x(uint8_t val, uint8_t garbage) {
 void sbc_ind_y(uint8_t val, uint8_t garbage) {
   uint16_t addr;
   addr = readZeroPage(val) + (readZeroPage(val + 1) << 8);
-  val = ~readByte(addr + regs.y) + 1;
-  garbage = val + regs.a - (getFlagCarry() ? 0 : 1);
+  val = ~readByte(addr + regs.y) + 1 - (getFlagCarry() ? 0 : 1);
+  garbage = val + regs.a;
   VFlag(val, regs.a, garbage);
   regs.a = garbage;
   SZFlags(regs.a);
@@ -1042,8 +1045,8 @@ void sbc_abs(uint8_t lower, uint8_t upper) {
   uint8_t res;
   uint16_t addr;
   addr = (upper << 8) + lower;
-  lower = ~readByte(addr) + 1;
-  res = lower + regs.a - (getFlagCarry() ? 0 : 1);
+  lower = ~readByte(addr) + 1 - (getFlagCarry() ? 0 : 1);
+  res = lower + regs.a;
   VFlag(lower, regs.a, res);
   regs.a = res;
   SZFlags(regs.a);
@@ -1054,8 +1057,8 @@ void sbc_abs_x(uint8_t lower, uint8_t upper) {
   uint8_t res;
   uint16_t addr;
   addr = (upper << 8) + lower + regs.x;
-  lower = ~readByte(addr) + 1;
-  res = lower + regs.a - (getFlagCarry() ? 0 : 1);
+  lower = ~readByte(addr) + 1 - (getFlagCarry() ? 0 : 1);
+  res = lower + regs.a;
   VFlag(lower, regs.a, res);
   regs.a = res;
   SZFlags(regs.a);
@@ -1067,8 +1070,8 @@ void sbc_abs_y(uint8_t lower, uint8_t upper) {
   uint8_t res;
   uint16_t addr;
   addr = (upper << 8) + lower + regs.y;
-  lower = ~readByte(addr) + 1;
-  res = lower + regs.a - (getFlagCarry() ? 0 : 1);
+  lower = ~readByte(addr) + 1 - (getFlagCarry() ? 0 : 1);
+  res = lower + regs.a;
   VFlag(lower, regs.a, res);
   regs.a = res;
   SZFlags(regs.a);
