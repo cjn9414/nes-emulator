@@ -308,21 +308,21 @@ void and_zp_x(uint8_t val, uint8_t garb) {
 }
 
 void and_abs(uint8_t lower, uint8_t upper) {  
-  uint8_t addr = (upper << 8) + lower;
+  uint16_t addr = (upper << 8) + lower;
   lower = readByte(addr) & regs.a;
   SZFlags(lower);
   regs.a = lower;
 }
 
 void and_abs_x(uint8_t lower, uint8_t upper) {
-  uint8_t addr = (upper << 8) + lower + regs.x;
+  uint16_t addr = (upper << 8) + lower + regs.x;
   lower = readByte(addr) & regs.a;
   SZFlags(lower);
   regs.a = lower;
 }
 
 void and_abs_y(uint8_t lower, uint8_t upper) {
-  uint8_t addr = (upper << 8) + lower + regs.y;
+  uint16_t addr = (upper << 8) + lower + regs.y;
   lower = readByte(addr) & regs.a;
   SZFlags(lower);
   regs.a = lower;
@@ -352,7 +352,7 @@ void asl_zp_x(uint8_t addr, uint8_t val) {
 }
 
 void asl_abs(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (lower << 8) + upper;
+  uint16_t addr = (upper << 8) + lower;
   lower = readByte(addr);
   setFlagCarry(getBit(lower, 7));
   lower = lower << 1;
@@ -360,7 +360,7 @@ void asl_abs(uint8_t lower, uint8_t upper) {
 }
 
 void asl_abs_x(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (lower << 8) + upper + regs.x;
+  uint16_t addr = (upper << 8) + lower + regs.x;
   lower = readByte(addr);
   setFlagCarry(getBit(lower, 7));
   lower = lower << 1;
@@ -371,7 +371,7 @@ void bit_zp(uint8_t val, uint8_t garb) {
   val = readZeroPage(val);
   setFlagNegative(getBit(val, 7));
   setFlagOverflow(getBit(val, 6));
-  setFlagZero(!(val & regs.a));
+  setFlagZero((val & regs.a != 0 ? 0 : 1));
 }
 
 void bit_abs(uint8_t lower, uint8_t upper) {
@@ -379,7 +379,7 @@ void bit_abs(uint8_t lower, uint8_t upper) {
   lower = readByte(addr);
   setFlagNegative(getBit(lower, 7));
   setFlagOverflow(getBit(lower, 6));
-  setFlagZero(!(lower & regs.a));
+  setFlagZero((lower & regs.a != 0 ? 0 : 1));
 }
 
 void bpl(uint8_t val, uint8_t garb) {  
@@ -486,7 +486,7 @@ void cpx_zp(uint8_t val, uint8_t garb) {
 }
 
 void cpx_abs(uint8_t lower, uint8_t upper) {
-  uint8_t addr = (upper << 8) + lower;
+  uint16_t addr = (upper << 8) + lower;
   lower = readByte(addr);
   flagCompare(regs.x, lower);
 }
@@ -501,7 +501,7 @@ void cpy_zp(uint8_t val, uint8_t garb) {
 }
 
 void cpy_abs(uint8_t lower, uint8_t upper) {
-  uint8_t addr = (upper << 8) + lower;
+  uint16_t addr = (upper << 8) + lower;
   lower = readByte(addr);
   flagCompare(regs.y, lower);
 }
@@ -828,21 +828,21 @@ void ora_zp_x(uint8_t val, uint8_t garb) {  // 0x15
 }
 
 void ora_abs(uint8_t lower, uint8_t upper) {  
-  uint8_t addr = (upper << 8) + lower;
+  uint16_t addr = (upper << 8) + lower;
   lower = readByte(addr) | regs.a;
   SZFlags(lower);
   regs.a = lower;
 }
 
 void ora_abs_x(uint8_t lower, uint8_t upper) {
-  uint8_t addr = (upper << 8) + lower + regs.x;
+  uint16_t addr = (upper << 8) + lower + regs.x;
   lower = readByte(addr) | regs.a;
   SZFlags(lower);
   regs.a = lower;
 }
 
 void ora_abs_y(uint8_t lower, uint8_t upper) {
-  uint8_t addr = (upper << 8) + lower + regs.y;
+  uint16_t addr = (upper << 8) + lower + regs.y;
   lower = readByte(addr) | regs.a;
   SZFlags(lower);
   regs.a = lower;

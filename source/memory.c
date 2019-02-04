@@ -33,7 +33,7 @@ uint8_t readByte(uint16_t addr) {
   // Mirroring occurs from $0000-$07FF to $0800-$1FFF.
   if (addr < 0x2000) {
     addr = addr % 0x800;
-    // Addressing the RAM of CPU memory.
+   // Addressing the RAM of CPU memory.
     return ram[addr];
   }
   // Addressing the PPU registers in CPU memory.
