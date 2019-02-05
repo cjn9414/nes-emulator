@@ -624,9 +624,10 @@ void jmp_abs(uint8_t lower, uint8_t upper) {
   regs.pc = (upper << 8) + lower;
 }
 
-void jmp_ind(uint8_t val, uint8_t garb) {
-  uint16_t addr = (readZeroPage(val+1) << 8) + readZeroPage(val);
-  regs.pc = readByte(addr);
+void jmp_ind(uint8_t lower, uint8_t upper) {
+  uint16_t addr = lower + (upper << 8);
+  regs.pc = readByte(addr) + (readByte(addr + 
+  (addr % 0x100 == 0xFF ? -0xFF : 1)) << 8);
 }
 
 void jsr(uint8_t lower, uint8_t upper) {
@@ -640,119 +641,101 @@ void jsr(uint8_t lower, uint8_t upper) {
 void ldx_imm(uint8_t addr, uint8_t garb) {
   regs.x = addr;
   SZFlags(regs.x);
-  setFlagNegative(getBit(regs.x, 7));
 }
 
 void ldx_zp(uint8_t addr, uint8_t garb) {
   regs.x = readZeroPage(addr);
   SZFlags(regs.x);
-  setFlagNegative(getBit(regs.x, 7));
 }
 
 void ldx_zp_y(uint8_t addr, uint8_t garb) {
   regs.x = readZeroPage(addr + regs.y);
   SZFlags(regs.x);
-  setFlagNegative(getBit(regs.x, 7));
 }
 
 void ldx_abs(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower;
   regs.x = readByte(addr);
   SZFlags(regs.x);
-  setFlagNegative(getBit(regs.x, 7));
 }
 
 void ldx_abs_y(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower + regs.y;
   regs.x = readByte(addr);
   SZFlags(regs.x);
-  setFlagNegative(getBit(regs.x, 7));
 }
 
 void ldy_imm(uint8_t addr, uint8_t garb) {
   regs.y = addr;
   SZFlags(regs.y);
-  setFlagNegative(getBit(regs.y, 7));
 }
 
 void ldy_zp(uint8_t addr, uint8_t garb) {
   regs.y = readZeroPage(addr);
   SZFlags(regs.y);
-  setFlagNegative(getBit(regs.y, 7));
 }
 
 void ldy_zp_x(uint8_t addr, uint8_t garb) {
   regs.y = readZeroPage(addr + regs.x);
   SZFlags(regs.y);
-  setFlagNegative(getBit(regs.y, 7));
 }
 
 void ldy_abs(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower;
   regs.y = readByte(addr);
   SZFlags(regs.y);
-  setFlagNegative(getBit(regs.y, 7));
 }
 
 void ldy_abs_x(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower + regs.x;
   regs.y = readByte(addr);
   SZFlags(regs.y);
-  setFlagNegative(getBit(regs.y, 7));
 }
 
 
 void lda_imm(uint8_t addr, uint8_t garb) {
   regs.a = addr;
   SZFlags(regs.a);
-  setFlagNegative(getBit(regs.a, 7));
 }
 
 void lda_zp(uint8_t addr, uint8_t garb) {
   regs.a = readZeroPage(addr);
   SZFlags(regs.a);
-  setFlagNegative(getBit(regs.a, 7));
 }
 
 void lda_zp_x(uint8_t addr, uint8_t garb) {
   regs.a = readZeroPage(addr + regs.x);
   SZFlags(regs.a);
-  setFlagNegative(getBit(regs.a, 7));
 }
 
 void lda_abs(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower;
   regs.a = readByte(addr);
   SZFlags(regs.a);
-  setFlagNegative(getBit(regs.a, 7));
 }
 
 void lda_abs_x(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower + regs.x;
   regs.a = readByte(addr);
   SZFlags(regs.a);
-  setFlagNegative(getBit(regs.a, 7));
 }
 
 void lda_abs_y(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower + regs.y;
   regs.a = readByte(addr);
   SZFlags(regs.a);
-  setFlagNegative(getBit(regs.a, 7));
 }
 
 void lda_ind_x(uint8_t val, uint8_t garb) {
   uint16_t addr = (readZeroPage(val + regs.x + 1) << 8) + readZeroPage(val + regs.x);
   regs.a = readByte(addr);
   SZFlags(regs.a);
-  setFlagNegative(getBit(regs.a, 7));
 }
 
 void lda_ind_y(uint8_t val, uint8_t garb) {
   uint16_t addr = (readZeroPage(val + 1) << 8) + readZeroPage(val);
   regs.a = readByte(addr + regs.y);
   SZFlags(regs.a);
-  setFlagNegative(getBit(regs.a, 7));
 }
 
 void lsr_acc(uint8_t garb0, uint8_t garb1) { 
@@ -1183,7 +1166,7 @@ const struct opcode opcodes[256] = {
   {"NAN", INVALID, 0},
   {"NAN", INVALID, 0},
   {"NAN", INVALID, 0},
-  {"ORA", ZERO_PAGE_X, 1},
+  {"ORA", ZERO_PAGE_X, 2},
   {"ASL", ZERO_PAGE_X, 2},
   {"NAN", INVALID, 0},
   {"CLC", IMPLIED, 1},
