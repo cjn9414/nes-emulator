@@ -515,7 +515,8 @@ void dec_zp(uint8_t addr, uint8_t garb) {
 }
 
 void dec_zp_x(uint8_t addr, uint8_t garb) {
-  garb = readZeroPage(regs.x + addr) - 1;
+  addr += regs.x;
+  garb = readZeroPage(addr) - 1;
   writeZeroPage(addr, garb);
   SZFlags(garb);
 }
@@ -601,7 +602,8 @@ void inc_zp(uint8_t addr, uint8_t garb) {
 }
 
 void inc_zp_x(uint8_t addr, uint8_t garb) {
-  garb = readZeroPage(regs.x + addr) + 1;
+  addr += regs.x;
+  garb = readZeroPage(addr) + 1;
   writeZeroPage(addr, garb);
   SZFlags(garb);
 }
@@ -753,7 +755,8 @@ void lsr_zp(uint8_t addr, uint8_t garb) {
 }
 
 void lsr_zp_x(uint8_t addr, uint8_t garb) {
-  uint8_t val = readZeroPage(addr+regs.x);
+  addr += regs.x;
+  uint8_t val = readZeroPage(addr);
   setFlagCarry(getBit(val, 0));
   val = val >> 1;
   writeZeroPage(addr, val);
@@ -1411,7 +1414,7 @@ FunctionExecute functions[0xFF] = {
   jsr, and_ind_x, nan, nan, bit_zp, and_zp, rol_zp, nan,
   plp, and_imm, rol_acc, nan, bit_abs, and_abs, rol_abs, nan,     // 0x2F
   bmi, and_ind_y, nan, nan, nan, and_zp_x, rol_zp_x, nan,
-  sec, and_abs_y, nan, nan, nan, and_abs_y, rol_abs_x, nan,       // 0x3F
+  sec, and_abs_y, nan, nan, nan, and_abs_x, rol_abs_x, nan,       // 0x3F
   rti, eor_ind_x, nan, nan, nan, eor_zp, lsr_zp, nan,
   pha, eor_imm, lsr_acc, nan, jmp_abs, eor_abs, lsr_abs, nan,     // 0x4F
   bvc, eor_ind_y, nan, nan, nan, eor_zp_x, lsr_zp_x, nan,
