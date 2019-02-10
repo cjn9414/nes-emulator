@@ -185,9 +185,9 @@ void branchJump(uint8_t val) {
 }
 
 
-/****************************/
-/* START OF OPCODE FUNCTIONS*/
-/****************************/
+/*************************************/
+/* START OF OFFICIAL OPCODE FUNCTIONS*/
+/*************************************/
 
 void nan(uint8_t garb0, uint8_t garb1) {
   printf("Error: Invalid opcode!.\n");
@@ -1138,6 +1138,49 @@ void sty_abs(uint8_t lower, uint8_t upper) {
   writeByte(addr, regs.y);
 }
 
+/*************************************/
+/* START OF UNOFFICIAL OPCODE FUNCTIONS*/
+/*************************************/
+
+void lax_abs(uint8_t lower, uint8_t upper) {
+  lda_abs(lower, upper);
+  ldx_abs(lower, upper);
+}
+
+void lax_abs_y(uint8_t lower, uint8_t upper) {
+  lda_abs_y(lower, upper);
+  ldx_abs_y(lower, upper);
+}
+
+void lax_zp(uint8_t val, uint8_t garb) {
+  lda_zp(val, garb);
+  ldx_zp(val, garb);
+}
+
+void lax_zp_y(uint8_t val, uint8_t garb) {
+  val = readZeroPage(val + regs.y);
+  regs.a = val;
+  regs.x = val;
+  SZFlags(regs.a);
+}
+
+void lax_ind_x(uint8_t val, uint8_t garb) {
+  
+  uint16_t addr = (readZeroPage(val + regs.x + 1) << 8) + readZeroPage(val + regs.x);
+  val = readByte(addr);
+  regs.a = val;
+  regs.x = val;
+  SZFlags(regs.a);
+}
+
+void lax_ind_y(uint8_t val, uint8_t garb) {
+  uint16_t addr = (readZeroPage(val + 1) << 8) + readZeroPage(val);
+  val = readByte(addr + regs.y);
+  regs.a = val;
+  regs.x = val;
+  SZFlags(regs.a);
+} 
+
 /**
  * Contains all information on CPU opcodes and addressing modes.
  * There are 56 unique opcodes and 13 different addressing modes,
@@ -1152,7 +1195,7 @@ const struct opcode opcodes[256] = {
   {"ORA", INDIRECT_X, 2},
   {"NAN", INVALID, 0},
   {"NAN", INVALID, 0},
-  {"NAN", INVALID, 0},
+  {"NOP", INVALID, 2},
   {"ORA", ZERO_PAGE, 2},
   {"ASL", ZERO_PAGE, 2},
   {"NAN", INVALID, 0},
@@ -1160,7 +1203,7 @@ const struct opcode opcodes[256] = {
   {"ORA", IMMEDIATE, 2},
   {"ASL", ACCUMULATOR, 1},
   {"NAN", INVALID, 0},
-  {"NAN", INVALID, 0},
+  {"NOP", INVALID, 3},
   {"ORA", ABSOLUTE, 3},
   {"ASL", ABSOLUTE, 3},
   {"NAN", INVALID, 0},    // 0x0F
@@ -1168,15 +1211,15 @@ const struct opcode opcodes[256] = {
   {"ORA", INDIRECT_Y, 2},
   {"NAN", INVALID, 0},
   {"NAN", INVALID, 0},
-  {"NAN", INVALID, 0},
+  {"NOP", INVALID, 2},
   {"ORA", ZERO_PAGE_X, 2},
   {"ASL", ZERO_PAGE_X, 2},
   {"NAN", INVALID, 0},
   {"CLC", IMPLIED, 1},
   {"ORA", ABSOLUTE_Y, 3},
+  {"NOP", INVALID, 1},
   {"NAN", INVALID, 0},
-  {"NAN", INVALID, 0},
-  {"NAN", INVALID, 0},
+  {"NOP", INVALID, 3},
   {"ORA", ABSOLUTE_X, 3},
   {"ASL", ABSOLUTE_X, 3},
   {"NAN", INVALID, 0},    // 0x1F
@@ -1200,15 +1243,15 @@ const struct opcode opcodes[256] = {
   {"AND", INDIRECT_Y, 2},
   {"NAN", INVALID, 0},
   {"NAN", INVALID, 0},
-  {"NAN", INVALID, 0},
+  {"NOP", INVALID, 2},
   {"AND", ZERO_PAGE_X, 2},
   {"ROL", ZERO_PAGE_X, 2},
   {"NAN", INVALID, 0},
   {"SEC", IMPLIED, 1},
   {"AND", ABSOLUTE_Y, 3},
+  {"NOP", INVALID, 1},
   {"NAN", INVALID, 0},
-  {"NAN", INVALID, 0},
-  {"NAN", INVALID, 0},
+  {"NOP", INVALID, 3},
   {"AND", ABSOLUTE_X, 3},
   {"ROL", ABSOLUTE_X, 3},
   {"NAN", INVALID, 0x02, 0},  // 0x3F
@@ -1216,7 +1259,7 @@ const struct opcode opcodes[256] = {
   {"EOR", INDIRECT_X, 2},
   {"NAN", INVALID, 0},
   {"NAN", INVALID, 0},
-  {"NAN", INVALID, 0},
+  {"NOP", INVALID, 2},
   {"EOR", ZERO_PAGE, 2},
   {"LSR", ZERO_PAGE, 2},
   {"NAN", INVALID, 0},
@@ -1232,15 +1275,15 @@ const struct opcode opcodes[256] = {
   {"EOR", INDIRECT_Y, 2},
   {"NAN", INVALID, 0},
   {"NAN", INVALID, 0},
-  {"NAN", INVALID, 0},
+  {"NOP", INVALID, 2},
   {"EOR", ZERO_PAGE_X, 2},
   {"LSR", ZERO_PAGE_X, 2},
   {"NAN", INVALID, 0},
   {"CLI", IMPLIED, 1},
   {"EOR", ABSOLUTE_Y, 3},
+  {"NOP", INVALID, 1},
   {"NAN", INVALID, 0},
-  {"NAN", INVALID, 0},
-  {"NAN", INVALID, 0},
+  {"NOP", INVALID, 3},
   {"EOR", ABSOLUTE_X, 3},
   {"LSR", ABSOLUTE_X, 3},
   {"NAN", INVALID, 0},    // 0x5F
@@ -1248,7 +1291,7 @@ const struct opcode opcodes[256] = {
   {"ADC", INDIRECT_X, 2},
   {"NAN", INVALID, 0},
   {"NAN", INVALID, 0},
-  {"NAN", INVALID, 0},
+  {"NOP", INVALID, 2},
   {"ADC", ZERO_PAGE, 2},
   {"ROR", ZERO_PAGE, 2},
   {"NAN", INVALID, 0},
@@ -1264,21 +1307,21 @@ const struct opcode opcodes[256] = {
   {"ADC", INDIRECT_Y, 2},
   {"NAN", INVALID, 0},
   {"NAN", INVALID, 0},
-  {"NAN", INVALID, 0},
+  {"NOP", INVALID, 2},
   {"ADC", ZERO_PAGE_X, 2},
   {"ROR", ZERO_PAGE_X, 2},
   {"NAN", INVALID, 0},
   {"SEI", IMPLIED, 1},
   {"ADC", ABSOLUTE_Y, 3},
+  {"NOP", INVALID, 1},
   {"NAN", INVALID, 0},
-  {"NAN", INVALID, 0},
-  {"NAN", INVALID, 0},
+  {"NOP", INVALID, 3},
   {"ADC", ABSOLUTE_X, 3},
   {"ROR", ABSOLUTE_X, 3},
   {"NAN", INVALID, 0},    // 0x7F
-  {"NAN", INVALID, 0},
+  {"NOP", INVALID, 2},
   {"STA", INDIRECT_X, 2},
-  {"NAN", INVALID, 0},
+  {"NOP", INVALID, 2},
   {"NAN", INVALID, 0},
   {"STY", ZERO_PAGE, 2},
   {"STA", ZERO_PAGE, 2},
@@ -1311,11 +1354,11 @@ const struct opcode opcodes[256] = {
   {"LDY", IMMEDIATE, 2},
   {"LDA", INDIRECT_X, 2},
   {"LDX", IMMEDIATE, 2},
-  {"NAN", INVALID, 0},
+  {"LAX", INDIRECT_X, 2},
   {"LDY", ZERO_PAGE, 2},
   {"LDA", ZERO_PAGE, 2},
   {"LDX", ZERO_PAGE, 2},
-  {"NAN", INVALID, 0},
+  {"LAX", ZERO_PAGE, 2},
   {"TAY", IMPLIED, 1},
   {"LDA", IMMEDIATE, 2},
   {"TAX", IMPLIED, 1},
@@ -1323,15 +1366,15 @@ const struct opcode opcodes[256] = {
   {"LDY", ABSOLUTE, 3},
   {"LDA", ABSOLUTE, 3},
   {"LDX", ABSOLUTE, 3},
-  {"NAN", INVALID, 0},    // 0xAF
+  {"LAX", ABSOLUTE, 3},    // 0xAF
   {"BCS", RELATIVE, 2}, 
   {"LDA", INDIRECT_Y, 2},
   {"NAN", INVALID, 0},
-  {"NAN", INVALID, 0},
+  {"LAX", INDIRECT_Y, 2},
   {"LDY", ZERO_PAGE_X, 2},
   {"LDA", ZERO_PAGE_X, 2},
   {"LDX", ZERO_PAGE_Y, 2},
-  {"NAN", INVALID, 0},
+  {"LAX", ZERO_PAGE_Y, 2},
   {"CLV", IMPLIED, 1},
   {"LDA", ABSOLUTE_Y, 3},
   {"TSX", IMPLIED, 1},
@@ -1339,10 +1382,10 @@ const struct opcode opcodes[256] = {
   {"LDY", ABSOLUTE_X, 3},
   {"LDA", ABSOLUTE_X, 3},
   {"LDX", ABSOLUTE_Y, 3},
-  {"NAN", INVALID, 0},    // 0xBF
+  {"LAX", ABSOLUTE_Y, 3},    // 0xBF
   {"CPY", IMMEDIATE, 2},
   {"CMP", INDIRECT_X, 2},
-  {"NAN", INVALID, 0},
+  {"NOP", INVALID, 2},
   {"NAN", INVALID, 0},
   {"CPY", ZERO_PAGE, 2},
   {"CMP", ZERO_PAGE, 2},
@@ -1360,21 +1403,21 @@ const struct opcode opcodes[256] = {
   {"CMP", INDIRECT_Y, 2},
   {"NAN", INVALID, 0},
   {"NAN", INVALID, 0},
-  {"NAN", INVALID, 0},
+  {"NOP", INVALID, 2},
   {"CMP", ZERO_PAGE_X, 2},
   {"DEC", ZERO_PAGE_X, 2},
   {"NAN", INVALID, 0},
   {"CLD", IMPLIED, 1},
   {"CMP", ABSOLUTE_Y, 3},
+  {"NOP", INVALID, 1},
   {"NAN", INVALID, 0},
-  {"NAN", INVALID, 0},
-  {"NAN", INVALID, 0},
+  {"NOP", INVALID, 3},
   {"CMP", ABSOLUTE_X, 3},
   {"DEC", ABSOLUTE_X, 3},
   {"NAN", INVALID, 0},      // 0xDF
   {"CPX", IMMEDIATE, 2},
   {"SBC", INDIRECT_X, 2},
-  {"NAN", INVALID, 0},
+  {"NOP", INVALID, 2},
   {"NAN", INVALID, 0},
   {"CPX", ZERO_PAGE, 2},
   {"SBC", ZERO_PAGE, 2},
@@ -1392,53 +1435,53 @@ const struct opcode opcodes[256] = {
   {"SBC", INDIRECT_Y, 2},
   {"NAN", INVALID, 0},
   {"NAN", INVALID, 0},
-  {"NAN", INVALID, 0},
+  {"NOP", INVALID, 2},
   {"SBC", ZERO_PAGE_X, 2},
   {"INC", ZERO_PAGE_X, 2},
   {"NAN", INVALID, 0},
   {"SED", IMPLIED, 1},
   {"SBC", ABSOLUTE_Y, 3},
+  {"NOP", INVALID, 1},      
   {"NAN", INVALID, 0},      
-  {"NAN", INVALID, 0},      
-  {"NAN", INVALID, 0},      
+  {"NOP", INVALID, 3},      
   {"SBC", ABSOLUTE_X, 3},  
   {"INC", ABSOLUTE_X, 3},  
   {"NAN", INVALID, 0}      // 0xFF
 };
 
 FunctionExecute functions[0xFF] = {
-  brk, ora_ind_x, nan, nan, nan, ora_zp, asl_zp, nan,
-  php, ora_imm, asl_acc, nan, nan, ora_abs, asl_abs, nan,         // 0x0F
-  bpl, ora_ind_y, nan, nan, nan, ora_zp_x, asl_zp_x, nan,
-  clc, ora_abs_y, nan, nan, nan, ora_abs_x, asl_abs_x, nan,       // 0x1F
+  brk, ora_ind_x, nan, nan, nop, ora_zp, asl_zp, nan,
+  php, ora_imm, asl_acc, nan, nop, ora_abs, asl_abs, nan,         // 0x0F
+  bpl, ora_ind_y, nan, nan, nop, ora_zp_x, asl_zp_x, nan,
+  clc, ora_abs_y, nop, nan, nop, ora_abs_x, asl_abs_x, nan,       // 0x1F
   jsr, and_ind_x, nan, nan, bit_zp, and_zp, rol_zp, nan,
   plp, and_imm, rol_acc, nan, bit_abs, and_abs, rol_abs, nan,     // 0x2F
-  bmi, and_ind_y, nan, nan, nan, and_zp_x, rol_zp_x, nan,
-  sec, and_abs_y, nan, nan, nan, and_abs_x, rol_abs_x, nan,       // 0x3F
-  rti, eor_ind_x, nan, nan, nan, eor_zp, lsr_zp, nan,
+  bmi, and_ind_y, nan, nan, nop, and_zp_x, rol_zp_x, nan,
+  sec, and_abs_y, nop, nan, nop, and_abs_x, rol_abs_x, nan,       // 0x3F
+  rti, eor_ind_x, nan, nan, nop, eor_zp, lsr_zp, nan,
   pha, eor_imm, lsr_acc, nan, jmp_abs, eor_abs, lsr_abs, nan,     // 0x4F
-  bvc, eor_ind_y, nan, nan, nan, eor_zp_x, lsr_zp_x, nan,
-  cli, eor_abs_y, nan, nan, nan, eor_abs_x, lsr_abs_x, nan,       // 0x5F
-  rts, adc_ind_x, nan, nan, nan, adc_zp, ror_zp, nan,
+  bvc, eor_ind_y, nan, nan, nop, eor_zp_x, lsr_zp_x, nan,
+  cli, eor_abs_y, nop, nan, nop, eor_abs_x, lsr_abs_x, nan,       // 0x5F
+  rts, adc_ind_x, nan, nan, nop, adc_zp, ror_zp, nan,
   pla, adc_imm, ror_acc, nan, jmp_ind, adc_abs, ror_abs, nan,     // 0x6F
-  bvs, adc_ind_y, nan, nan, nan, adc_zp_x, ror_zp_x, nan, 
-  sei, adc_abs_y, nan, nan, nan, adc_abs_x, ror_abs_x, nan,       // 0x7F
-  nan, sta_ind_x, nan, nan, sty_zp, sta_zp, stx_zp, nan,
+  bvs, adc_ind_y, nan, nan, nop, adc_zp_x, ror_zp_x, nan, 
+  sei, adc_abs_y, nop, nan, nop, adc_abs_x, ror_abs_x, nan,       // 0x7F
+  nop, sta_ind_x, nop, nan, sty_zp, sta_zp, stx_zp, nan,
   dey, nan, txa, nan, sty_abs, sta_abs, stx_abs, nan,             // 0x8F
   bcc, sta_ind_y, nan, nan, sty_zp_x, sta_zp_x, stx_zp_y, nan,
   tya, sta_abs_y, txs, nan, nan, sta_abs_x, nan, nan,             // 0x9F
-  ldy_imm, lda_ind_x, ldx_imm, nan, ldy_zp, lda_zp, ldx_zp, nan,
-  tay, lda_imm, tax, nan, ldy_abs, lda_abs, ldx_abs, nan,         // 0xAF
-  bcs, lda_ind_y, nan, nan, ldy_zp_x, lda_zp_x, ldx_zp_y, nan,
-  clv, lda_abs_y, tsx, nan, ldy_abs_x, lda_abs_x, ldx_abs_y, nan, // 0xBF
-  cpy_imm, cmp_ind_x, nan, nan, cpy_zp, cmp_zp, dec_zp, nan,
+  ldy_imm, lda_ind_x, ldx_imm, lax_ind_x, ldy_zp, lda_zp, ldx_zp, lax_zp,
+  tay, lda_imm, tax, nan, ldy_abs, lda_abs, ldx_abs, lax_abs,         // 0xAF
+  bcs, lda_ind_y, nan, lax_ind_y, ldy_zp_x, lda_zp_x, ldx_zp_y, lax_zp_y,
+  clv, lda_abs_y, tsx, nan, ldy_abs_x, lda_abs_x, ldx_abs_y, lax_abs_y, // 0xBF
+  cpy_imm, cmp_ind_x, nop, nan, cpy_zp, cmp_zp, dec_zp, nan,
   iny, cmp_imm, dex, nan, cpy_abs, cmp_abs, dec_abs, nan,         // 0xCF
-  bne, cmp_ind_y, nan, nan, nan, cmp_zp_x, dec_zp_x, nan, 
-  cld, cmp_abs_y, nan, nan, nan, cmp_abs_x, dec_abs_x, nan,       // 0xDF
-  cpx_imm, sbc_ind_x, nan, nan, cpx_zp, sbc_zp, inc_zp, nan, 
+  bne, cmp_ind_y, nan, nan, nop, cmp_zp_x, dec_zp_x, nan, 
+  cld, cmp_abs_y, nop, nan, nop, cmp_abs_x, dec_abs_x, nan,       // 0xDF
+  cpx_imm, sbc_ind_x, nop, nan, cpx_zp, sbc_zp, inc_zp, nan, 
   inx, sbc_imm, nop, nan, cpx_abs, sbc_abs, inc_abs, nan,         // 0xEF
-  beq, sbc_ind_y, nan, nan, nan, sbc_zp_x, inc_zp_x, nan, 
-  sed, sbc_abs_y, nan, nan, nan, sbc_abs_x, inc_abs_x, nan        // 0xFF
+  beq, sbc_ind_y, nan, nan, nop, sbc_zp_x, inc_zp_x, nan, 
+  sed, sbc_abs_y, nop, nan, nop, sbc_abs_x, inc_abs_x, nan        // 0xFF
 };
 
 
