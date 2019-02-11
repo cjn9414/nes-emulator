@@ -371,7 +371,7 @@ void bit_zp(uint8_t val, uint8_t garb) {
   val = readZeroPage(val);
   setFlagNegative(getBit(val, 7));
   setFlagOverflow(getBit(val, 6));
-  setFlagZero((val & regs.a != 0 ? 0 : 1));
+  setFlagZero((val & regs.a) != 0 ? 0 : 1);
 }
 
 void bit_abs(uint8_t lower, uint8_t upper) {
@@ -379,7 +379,7 @@ void bit_abs(uint8_t lower, uint8_t upper) {
   lower = readByte(addr);
   setFlagNegative(getBit(lower, 7));
   setFlagOverflow(getBit(lower, 6));
-  setFlagZero((lower & regs.a != 0 ? 0 : 1));
+  setFlagZero((lower & regs.a) != 0 ? 0 : 1);
 }
 
 void bpl(uint8_t val, uint8_t garb) {  
@@ -1181,6 +1181,70 @@ void lax_ind_y(uint8_t val, uint8_t garb) {
   SZFlags(regs.a);
 } 
 
+void sax(uint8_t val, uint8_t garb) {
+  val = (regs.a & regs.x) - val;
+  setFlagCarry((val > (regs.a & regs.x)) ? 1 : 0);
+  SZFlags(val);
+}
+
+void axs_abs(uint8_t lower, uint8_t upper) {
+  uint16_t addr = (upper << 8) + lower;
+  writeByte(addr, regs.a & regs.x);
+}
+
+void axs_zp(uint8_t val, uint8_t garb) {
+  writeZeroPage(val, regs.a & regs.x);
+}
+
+void axs_zp_y(uint8_t val, uint8_t garb) {
+  writeZeroPage(val + regs.y, regs.a & regs.x);
+}
+
+void axs_ind_x(uint8_t val, uint8_t garb) {
+  uint16_t addr = (readZeroPage(val + 1 + regs.x) << 8) + readZeroPage(val + regs.x);
+  writeByte(addr, regs.a & regs.x);
+}
+
+void dcm_abs(uint8_t lower, uint8_t upper) {
+  uint16_t addr = (upper << 8) + lower;
+  writeByte(addr, readByte(addr)-1);
+  cmp_abs(lower, upper);
+}
+
+void dcm_abs_x(uint8_t lower, uint8_t upper) {
+  uint16_t addr = (upper << 8) + lower + regs.x;
+  writeByte(addr, readByte(addr) - 1);
+  cmp_abs_x(lower, upper);
+}
+
+void dcm_abs_y(uint8_t lower, uint8_t upper) {
+  uint16_t addr = (upper << 8) + lower + regs.y;
+  writeByte(addr, readByte(addr)-1);
+  cmp_abs_y(lower, upper);
+}
+
+void dcm_zp(uint8_t val, uint8_t garb) {
+  writeZeroPage(val, readZeroPage(val) - 1);
+  cmp_zp(val, garb);
+}
+
+void dcm_zp_x(uint8_t val, uint8_t garb) {
+  writeZeroPage(val + regs.x, readZeroPage(val + regs.x) - 1);
+  cmp_zp(val + regs.x, garb);
+}
+
+void dcm_ind_x(uint8_t val, uint8_t garb) {
+  uint16_t addr = (readZeroPage(val + regs.x + 1) << 8) + readZeroPage(val + regs.x);
+  writeByte(addr, readByte(addr) - 1);
+  cmp_ind_x(val, garb);
+}
+
+void dcm_ind_y(uint8_t val, uint8_t garb) {
+  uint16_t addr = (readZeroPage(val + 1) << 8) + readZeroPage(val);
+  writeByte(addr + regs.y, readByte(addr + regs.y) - 1);
+  cmp_ind_y(val, garb);
+}
+
 /**
  * Contains all information on CPU opcodes and addressing modes.
  * There are 56 unique opcodes and 13 different addressing modes,
@@ -1322,11 +1386,11 @@ const struct opcode opcodes[256] = {
   {"NOP", INVALID, 2},
   {"STA", INDIRECT_X, 2},
   {"NOP", INVALID, 2},
-  {"NAN", INVALID, 0},
+  {"AXS", INDIRECT_Y, 2},
   {"STY", ZERO_PAGE, 2},
   {"STA", ZERO_PAGE, 2},
   {"STX", ZERO_PAGE, 2},
-  {"NAN", INVALID, 0},
+  {"AXS", ZERO_PAGE, 2},
   {"DEY", IMPLIED, 1},
   {"NAN", INVALID, 0},
   {"TXA", IMPLIED, 1},
@@ -1334,7 +1398,7 @@ const struct opcode opcodes[256] = {
   {"STY", ABSOLUTE, 3},
   {"STA", ABSOLUTE, 3},
   {"STX", ABSOLUTE, 3},
-  {"NAN", INVALID, 0},    // 0x8F
+  {"AXS", ABSOLUTE, 3},    // 0x8F
   {"BCC", RELATIVE, 2},
   {"STA", INDIRECT_Y, 2},
   {"NAN", INVALID, 0},
@@ -1342,7 +1406,7 @@ const struct opcode opcodes[256] = {
   {"STY", ZERO_PAGE_X, 2},
   {"STA", ZERO_PAGE_X, 2},
   {"STX", ZERO_PAGE_X, 2},
-  {"NAN", INVALID, 0},
+  {"AXS", ZERO_PAGE_Y, 2},
   {"TYA", IMPLIED, 1},
   {"STA", ABSOLUTE_Y, 3},
   {"TXS", IMPLIED, 1},
@@ -1386,35 +1450,35 @@ const struct opcode opcodes[256] = {
   {"CPY", IMMEDIATE, 2},
   {"CMP", INDIRECT_X, 2},
   {"NOP", INVALID, 2},
-  {"NAN", INVALID, 0},
+  {"DCM", INDIRECT_X, 2},
   {"CPY", ZERO_PAGE, 2},
   {"CMP", ZERO_PAGE, 2},
   {"DEC", ZERO_PAGE, 2},
-  {"NAN", INVALID, 0},
+  {"DCM", ZERO_PAGE, 2},
   {"INY", IMPLIED, 1},
   {"CMP", IMMEDIATE, 2},
   {"DEX", IMPLIED, 1},
-  {"NAN", INVALID, 0},
+  {"SAX", IMMEDIATE, 2},
   {"CPY", ABSOLUTE, 3},
   {"CMP", ABSOLUTE, 3},
   {"DEC", ABSOLUTE, 3},
-  {"NAN", INVALID, 0},    // 0xCF     
+  {"DCM", ABSOLUTE, 3},    // 0xCF     
   {"BNE", RELATIVE, 2},
   {"CMP", INDIRECT_Y, 2},
   {"NAN", INVALID, 0},
-  {"NAN", INVALID, 0},
+  {"DCM", INDIRECT_Y, 2},
   {"NOP", INVALID, 2},
   {"CMP", ZERO_PAGE_X, 2},
   {"DEC", ZERO_PAGE_X, 2},
-  {"NAN", INVALID, 0},
+  {"DCM", ZERO_PAGE_X, 2},
   {"CLD", IMPLIED, 1},
   {"CMP", ABSOLUTE_Y, 3},
   {"NOP", INVALID, 1},
-  {"NAN", INVALID, 0},
+  {"DCM", ABSOLUTE_Y, 3},
   {"NOP", INVALID, 3},
   {"CMP", ABSOLUTE_X, 3},
   {"DEC", ABSOLUTE_X, 3},
-  {"NAN", INVALID, 0},      // 0xDF
+  {"DCM", ABSOLUTE_X, 3},      // 0xDF
   {"CPX", IMMEDIATE, 2},
   {"SBC", INDIRECT_X, 2},
   {"NOP", INVALID, 2},
@@ -1426,7 +1490,7 @@ const struct opcode opcodes[256] = {
   {"INX", IMPLIED, 1},
   {"SBC", IMMEDIATE, 2},
   {"NOP", IMPLIED, 1},
-  {"NAN", INVALID, 0},
+  {"SBC", IMMEDIATE, 2},
   {"CPX", ABSOLUTE, 3},
   {"SBC", ABSOLUTE, 3},
   {"INC", ABSOLUTE, 3},
@@ -1466,20 +1530,20 @@ FunctionExecute functions[0xFF] = {
   pla, adc_imm, ror_acc, nan, jmp_ind, adc_abs, ror_abs, nan,     // 0x6F
   bvs, adc_ind_y, nan, nan, nop, adc_zp_x, ror_zp_x, nan, 
   sei, adc_abs_y, nop, nan, nop, adc_abs_x, ror_abs_x, nan,       // 0x7F
-  nop, sta_ind_x, nop, nan, sty_zp, sta_zp, stx_zp, nan,
-  dey, nan, txa, nan, sty_abs, sta_abs, stx_abs, nan,             // 0x8F
-  bcc, sta_ind_y, nan, nan, sty_zp_x, sta_zp_x, stx_zp_y, nan,
+  nop, sta_ind_x, nop, axs_ind_x, sty_zp, sta_zp, stx_zp, axs_zp,
+  dey, nan, txa, nan, sty_abs, sta_abs, stx_abs, axs_abs,             // 0x8F
+  bcc, sta_ind_y, nan, nan, sty_zp_x, sta_zp_x, stx_zp_y, axs_zp_y,
   tya, sta_abs_y, txs, nan, nan, sta_abs_x, nan, nan,             // 0x9F
   ldy_imm, lda_ind_x, ldx_imm, lax_ind_x, ldy_zp, lda_zp, ldx_zp, lax_zp,
   tay, lda_imm, tax, nan, ldy_abs, lda_abs, ldx_abs, lax_abs,         // 0xAF
   bcs, lda_ind_y, nan, lax_ind_y, ldy_zp_x, lda_zp_x, ldx_zp_y, lax_zp_y,
   clv, lda_abs_y, tsx, nan, ldy_abs_x, lda_abs_x, ldx_abs_y, lax_abs_y, // 0xBF
-  cpy_imm, cmp_ind_x, nop, nan, cpy_zp, cmp_zp, dec_zp, nan,
-  iny, cmp_imm, dex, nan, cpy_abs, cmp_abs, dec_abs, nan,         // 0xCF
-  bne, cmp_ind_y, nan, nan, nop, cmp_zp_x, dec_zp_x, nan, 
-  cld, cmp_abs_y, nop, nan, nop, cmp_abs_x, dec_abs_x, nan,       // 0xDF
+  cpy_imm, cmp_ind_x, nop, dcm_ind_x, cpy_zp, cmp_zp, dec_zp, dcm_zp,
+  iny, cmp_imm, dex, sax, cpy_abs, cmp_abs, dec_abs, dcm_abs,         // 0xCF
+  bne, cmp_ind_y, nan, dcm_ind_y, nop, cmp_zp_x, dec_zp_x, dcm_zp_x, 
+  cld, cmp_abs_y, nop, dcm_abs_y, nop, cmp_abs_x, dec_abs_x, dcm_abs_x,       // 0xDF
   cpx_imm, sbc_ind_x, nop, nan, cpx_zp, sbc_zp, inc_zp, nan, 
-  inx, sbc_imm, nop, nan, cpx_abs, sbc_abs, inc_abs, nan,         // 0xEF
+  inx, sbc_imm, nop, sbc_imm, cpx_abs, sbc_abs, inc_abs, nan,         // 0xEF
   beq, sbc_ind_y, nan, nan, nop, sbc_zp_x, inc_zp_x, nan, 
   sed, sbc_abs_y, nop, nan, nop, sbc_abs_x, inc_abs_x, nan        // 0xFF
 };
