@@ -1206,35 +1206,33 @@ void axs_ind_x(uint8_t val, uint8_t garb) {
 }
 
 void dcm_abs(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower;
-  writeByte(addr, readByte(addr)-1);
+  dec_abs(lower, upper);
   cmp_abs(lower, upper);
 }
 
 void dcm_abs_x(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower + regs.x;
-  writeByte(addr, readByte(addr) - 1);
+  dec_abs_x(lower, upper);
   cmp_abs_x(lower, upper);
 }
 
 void dcm_abs_y(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower + regs.y;
-  writeByte(addr, readByte(addr)-1);
+  uint16_t addr = (upper << 8) + lower;
+  writeByte(addr, readByte(addr + regs.y) - 1);
   cmp_abs_y(lower, upper);
 }
 
 void dcm_zp(uint8_t val, uint8_t garb) {
-  writeZeroPage(val, readZeroPage(val) - 1);
+  dec_zp(val, garb);
   cmp_zp(val, garb);
 }
 
 void dcm_zp_x(uint8_t val, uint8_t garb) {
-  writeZeroPage(val + regs.x, readZeroPage(val + regs.x) - 1);
-  cmp_zp(val + regs.x, garb);
+  dec_zp_x(val, garb);
+  cmp_zp_x(val, garb);
 }
 
 void dcm_ind_x(uint8_t val, uint8_t garb) {
-  uint16_t addr = (readZeroPage(val + regs.x + 1) << 8) + readZeroPage(val + regs.x);
+  uint16_t addr = (readZeroPage(val + 1 + regs.x) << 8) + readZeroPage(val + regs.x);
   writeByte(addr, readByte(addr) - 1);
   cmp_ind_x(val, garb);
 }
@@ -1243,6 +1241,61 @@ void dcm_ind_y(uint8_t val, uint8_t garb) {
   uint16_t addr = (readZeroPage(val + 1) << 8) + readZeroPage(val);
   writeByte(addr + regs.y, readByte(addr + regs.y) - 1);
   cmp_ind_y(val, garb);
+}
+
+void isb_abs(uint8_t lower, uint8_t upper) {
+  uint8_t carry = getFlagCarry();
+  inc_abs(lower, upper);
+  sbc_abs(lower, upper);
+  setFlagCarry(carry);
+}
+
+void isb_abs_x(uint8_t lower, uint8_t upper) {
+  uint8_t carry = getFlagCarry();
+  inc_abs_x(lower, upper);
+  sbc_abs_x(lower, upper);
+  setFlagCarry(carry);
+}
+
+void isb_abs_y(uint8_t lower, uint8_t upper) {
+  uint16_t addr = (upper << 8) + lower;
+  uint8_t carry = getFlagCarry();
+  writeByte(addr + regs.y, readByte(addr + regs.y) + 1); 
+  SZFlags(readByte(addr));
+  sbc_abs_y(lower, upper);
+  setFlagCarry(carry);
+}
+
+void isb_zp(uint8_t val, uint8_t garb) {
+  inc_zp(val, garb);
+  garb = getFlagCarry();
+  sbc_zp(val, garb);
+  setFlagCarry(garb);
+}
+
+void isb_zp_x(uint8_t val, uint8_t garb) {
+  inc_zp_x(val, garb);
+  garb = getFlagCarry();
+  sbc_zp_x(val, garb);
+  setFlagCarry(garb);
+}
+
+void isb_ind_x(uint8_t val, uint8_t garb) {
+  uint16_t addr = (readZeroPage(val + 1 + regs.x) << 8) + readZeroPage(val + regs.x);
+  writeByte(addr, readByte(addr) + 1);
+  SZFlags(readByte(addr));
+  garb = getFlagCarry();
+  sbc_ind_x(val, garb);
+  setFlagCarry(garb);
+}
+
+void isb_ind_y(uint8_t val, uint8_t garb) {
+  uint16_t addr = (readZeroPage(val + 1) << 8) + readZeroPage(val);
+  writeByte(addr + regs.y, readByte(addr + regs.y) + 1);
+  SZFlags(readByte(addr));
+  garb = getFlagCarry();
+  sbc_ind_y(val, garb);
+  setFlagCarry(garb);
 }
 
 /**
@@ -1482,11 +1535,11 @@ const struct opcode opcodes[256] = {
   {"CPX", IMMEDIATE, 2},
   {"SBC", INDIRECT_X, 2},
   {"NOP", INVALID, 2},
-  {"NAN", INVALID, 0},
+  {"ISB", INDIRECT_X, 2},
   {"CPX", ZERO_PAGE, 2},
   {"SBC", ZERO_PAGE, 2},
   {"INC", ZERO_PAGE, 2},
-  {"NAN", INVALID, 0},
+  {"ISB", ZERO_PAGE, 2},
   {"INX", IMPLIED, 1},
   {"SBC", IMMEDIATE, 2},
   {"NOP", IMPLIED, 1},
@@ -1494,26 +1547,26 @@ const struct opcode opcodes[256] = {
   {"CPX", ABSOLUTE, 3},
   {"SBC", ABSOLUTE, 3},
   {"INC", ABSOLUTE, 3},
-  {"NAN", INVALID, 0},  // 0xEF
+  {"ISB", ABSOLUTE, 3},  // 0xEF
   {"BEQ", RELATIVE, 2},
   {"SBC", INDIRECT_Y, 2},
   {"NAN", INVALID, 0},
-  {"NAN", INVALID, 0},
+  {"ISB", INDIRECT_Y, 2},
   {"NOP", INVALID, 2},
   {"SBC", ZERO_PAGE_X, 2},
   {"INC", ZERO_PAGE_X, 2},
-  {"NAN", INVALID, 0},
+  {"ISB", ZERO_PAGE_X, 2},
   {"SED", IMPLIED, 1},
   {"SBC", ABSOLUTE_Y, 3},
   {"NOP", INVALID, 1},      
-  {"NAN", INVALID, 0},      
+  {"ISB", ABSOLUTE_Y, 3},      
   {"NOP", INVALID, 3},      
   {"SBC", ABSOLUTE_X, 3},  
   {"INC", ABSOLUTE_X, 3},  
-  {"NAN", INVALID, 0}      // 0xFF
+  {"ISB", ABSOLUTE_X, 3}      // 0xFF
 };
 
-FunctionExecute functions[0xFF] = {
+FunctionExecute functions[0x100] = {
   brk, ora_ind_x, nan, nan, nop, ora_zp, asl_zp, nan,
   php, ora_imm, asl_acc, nan, nop, ora_abs, asl_abs, nan,         // 0x0F
   bpl, ora_ind_y, nan, nan, nop, ora_zp_x, asl_zp_x, nan,
@@ -1542,10 +1595,10 @@ FunctionExecute functions[0xFF] = {
   iny, cmp_imm, dex, sax, cpy_abs, cmp_abs, dec_abs, dcm_abs,         // 0xCF
   bne, cmp_ind_y, nan, dcm_ind_y, nop, cmp_zp_x, dec_zp_x, dcm_zp_x, 
   cld, cmp_abs_y, nop, dcm_abs_y, nop, cmp_abs_x, dec_abs_x, dcm_abs_x,       // 0xDF
-  cpx_imm, sbc_ind_x, nop, nan, cpx_zp, sbc_zp, inc_zp, nan, 
-  inx, sbc_imm, nop, sbc_imm, cpx_abs, sbc_abs, inc_abs, nan,         // 0xEF
-  beq, sbc_ind_y, nan, nan, nop, sbc_zp_x, inc_zp_x, nan, 
-  sed, sbc_abs_y, nop, nan, nop, sbc_abs_x, inc_abs_x, nan        // 0xFF
+  cpx_imm, sbc_ind_x, nop, isb_ind_x, cpx_zp, sbc_zp, inc_zp, isb_zp, 
+  inx, sbc_imm, nop, sbc_imm, cpx_abs, sbc_abs, inc_abs, isb_abs,         // 0xEF
+  beq, sbc_ind_y, nan, isb_ind_y, nop, sbc_zp_x, inc_zp_x, isb_zp_x, 
+  sed, sbc_abs_y, nop, isb_abs_y, nop, sbc_abs_x, inc_abs_x, isb_abs_x        // 0xFF
 };
 
 
