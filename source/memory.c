@@ -1,6 +1,7 @@
 #include <stdint.h>
 
 #include "memory.h"
+#include "memoryMappedIO.h"
 #include "registers.h"
 #include "MMC1.h"
 
@@ -10,7 +11,7 @@ extern struct registers regs;
 
 // Declaring components of CPU memory. 
 uint8_t ram[0x0800];
-extern MemoryMappedRegisters ppu_registers;
+extern MemoryMappedRegisters ppuRegisters;
 uint8_t apu_io_reg[0x0020];
 uint8_t exp_rom[0x1FDF];
 uint8_t sram[0x2000];
@@ -40,24 +41,24 @@ uint8_t readByte(uint16_t addr) {
   else if (addr < 0x2008) {
     switch (addr) {
       case 0x2000:
-        return ppu_registers.PPUControl;
+        return ppuRegisters.PPUControl;
       case 0x2001:
-        return ppu_registers.PPUMask;
+        return ppuRegisters.PPUMask;
       case 0x2002:
-        ppu_registers.PPUWriteLatch = 0;
-        return ppu_registers.PPUStatus;
+        ppuRegisters.PPUWriteLatch = 0;
+        return ppuRegisters.PPUStatus;
       case 0x2003:
-        return ppu_registers.OAMAddress;
+        return ppuRegisters.OAMAddress;
       case 0x2004:
-        return ppu_registers.OAMData;
+        return ppuRegisters.OAMData;
       case 0x2005:
-        return ppu_registers.PPUScroll;
+        return ppuRegisters.PPUScroll;
       case 0x2006:
-        return ppu_registers.PPUAddress;
+        return ppuRegisters.PPUAddress;
       case 0x2007:
         {
-        uint8_t val = readPictureByte(ppu_registers.PPUWriteLatch);
-        ppu_registers.PPUWriteLatch += getBit(ppu_registers.PPUControl, 2) ? 32 : 1;
+        uint8_t val = readPictureByte(ppuRegisters.PPUWriteLatch);
+        ppuRegisters.PPUWriteLatch += getBit(ppuRegisters.PPUControl, 2) ? 32 : 1;
         return val;
         }
       default:
@@ -122,32 +123,32 @@ void writeByte (uint16_t addr, uint8_t val) {
   else if (addr < 0x2008) {
     switch(addr) {
       case 0x2000:
-        ppu_registers.PPUControl = val;
+        ppuRegisters.PPUControl = val;
         break;
       case 0x2001:
-        ppu_registers.PPUMask = val;
+        ppuRegisters.PPUMask = val;
         break;
       case 0x2002:
-        ppu_registers.PPUStatus = val;
+        ppuRegisters.PPUStatus = val;
         break;
       case 0x2003:
-        ppu_registers.OAMAddress = val;
+        ppuRegisters.OAMAddress = val;
         break;
       case 0x2004:
-        ppu_registers.OAMData = val;
+        ppuRegisters.OAMData = val;
         break;
       case 0x2005:
-        ppu_registers.PPUScroll = val;
-        ppu_registers.PPUWriteLatch <<= 8;
-        ppu_registers.PPUWriteLatch |= val;
+        ppuRegisters.PPUScroll = val;
+        ppuRegisters.PPUWriteLatch <<= 8;
+        ppuRegisters.PPUWriteLatch |= val;
         break;
       case 0x2006:
-        ppu_registers.PPUAddress = val;
-        ppu_registers.PPUWriteLatch <<= 8;
-        ppu_registers.PPUWriteLatch |= val;
+        ppuRegisters.PPUAddress = val;
+        ppuRegisters.PPUWriteLatch <<= 8;
+        ppuRegisters.PPUWriteLatch |= val;
         break;
       case 0x2007:
-        ppu_registers.PPUData = val;
+        ppuRegisters.PPUData = val;
         break;
       default:
         printf("Error: Unexpected address to memory mapper I/O registers.\n");

@@ -7,6 +7,8 @@ enum FrameStatus { VISIBLE, V_BLANK, POST_RENDER, PRE_RENDER };
 
 enum ScanlineStatus { STANDARD_FETCH, UNUSED_FETCH, H_BLANK, PRE_FETCH };
 
+//enum InterruptType { IRQ, NMI, RESET, NONE };
+
 typedef struct {
   uint8_t tbl[32*30];
   uint8_t attr[8*8];

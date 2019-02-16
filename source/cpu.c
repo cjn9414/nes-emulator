@@ -1298,6 +1298,50 @@ void isb_ind_y(uint8_t val, uint8_t garb) {
   setFlagCarry(garb);
 }
 
+void slo_abs(uint8_t lower, uint8_t upper) {
+  asl_abs(lower, upper);
+  ora_abs(lower, upper);
+}
+
+void slo_abs_x(uint8_t lower, uint8_t upper) {
+  asl_abs_x(lower, upper);
+  ora_abs_x(lower, upper);
+}
+
+void slo_abs_y(uint8_t lower, uint8_t upper) {
+  uint16_t addr = (upper << 8) + lower + regs.y;
+  lower = readByte(addr);
+  setFlagCarry(getBit(lower, 7));
+  writeByte(addr, lower << 1);
+  ora_abs_y(lower, upper);
+}
+
+void slo_zp(uint8_t val, uint8_t garb) {
+  asl_zp(val, garb);
+  ora_zp(val, garb);
+}
+
+void slo_zp_x(uint8_t val, uint8_t garb) {
+  asl_zp_x(val, garb);
+  ora_zp_x(val, garb);
+}
+
+void slo_ind_x(uint8_t val, uint8_t garb) {
+  uint16_t addr = (readZeroPage(val + regs.x + 1) << 8) + readZeroPage(val + regs.x);
+  garb = readByte(addr);
+  setFlagCarry(getBit(garb, 7));
+  writeByte(addr, (garb << 1));
+  ora_ind_x(val, garb);
+}
+
+void slo_ind_y(uint8_t val, uint8_t garb) {
+  uint16_t addr = (readZeroPage(val + 1) << 8) + readZeroPage(val);
+  garb = readByte(addr + regs.y);
+  setFlagCarry(getBit(garb, 7));
+  writeByte(addr + regs.y, garb << 1);
+  ora_ind_y(val, garb);
+}
+
 /**
  * Contains all information on CPU opcodes and addressing modes.
  * There are 56 unique opcodes and 13 different addressing modes,
@@ -1311,11 +1355,11 @@ const struct opcode opcodes[256] = {
   {"BRK", IMPLIED, 1},    // 0x00
   {"ORA", INDIRECT_X, 2},
   {"NAN", INVALID, 0},
-  {"NAN", INVALID, 0},
+  {"SLO", INDIRECT_X, 2},
   {"NOP", INVALID, 2},
   {"ORA", ZERO_PAGE, 2},
   {"ASL", ZERO_PAGE, 2},
-  {"NAN", INVALID, 0},
+  {"SLO", ZERO_PAGE, 2},
   {"PHP", IMPLIED, 1},
   {"ORA", IMMEDIATE, 2},
   {"ASL", ACCUMULATOR, 1},
@@ -1323,23 +1367,23 @@ const struct opcode opcodes[256] = {
   {"NOP", INVALID, 3},
   {"ORA", ABSOLUTE, 3},
   {"ASL", ABSOLUTE, 3},
-  {"NAN", INVALID, 0},    // 0x0F
+  {"SLO", ABSOLUTE, 3},    // 0x0F
   {"BPL", RELATIVE, 2},
   {"ORA", INDIRECT_Y, 2},
   {"NAN", INVALID, 0},
-  {"NAN", INVALID, 0},
+  {"SLO", INDIRECT_Y, 2},
   {"NOP", INVALID, 2},
   {"ORA", ZERO_PAGE_X, 2},
   {"ASL", ZERO_PAGE_X, 2},
-  {"NAN", INVALID, 0},
+  {"SLO", INDIRECT_X, 2},
   {"CLC", IMPLIED, 1},
   {"ORA", ABSOLUTE_Y, 3},
   {"NOP", INVALID, 1},
-  {"NAN", INVALID, 0},
+  {"SLO", ABSOLUTE_Y, 3},
   {"NOP", INVALID, 3},
   {"ORA", ABSOLUTE_X, 3},
   {"ASL", ABSOLUTE_X, 3},
-  {"NAN", INVALID, 0},    // 0x1F
+  {"SLO", ABSOLUTE_X, 3},    // 0x1F
   {"JSR", ABSOLUTE, 3},
   {"AND", INDIRECT_X, 2},
   {"NAN", INVALID, 0},
@@ -1567,10 +1611,10 @@ const struct opcode opcodes[256] = {
 };
 
 FunctionExecute functions[0x100] = {
-  brk, ora_ind_x, nan, nan, nop, ora_zp, asl_zp, nan,
-  php, ora_imm, asl_acc, nan, nop, ora_abs, asl_abs, nan,         // 0x0F
-  bpl, ora_ind_y, nan, nan, nop, ora_zp_x, asl_zp_x, nan,
-  clc, ora_abs_y, nop, nan, nop, ora_abs_x, asl_abs_x, nan,       // 0x1F
+  brk, ora_ind_x, nan, slo_ind_x, nop, ora_zp, asl_zp, slo_zp,
+  php, ora_imm, asl_acc, nan, nop, ora_abs, asl_abs, slo_abs,         // 0x0F
+  bpl, ora_ind_y, nan, slo_ind_y, nop, ora_zp_x, asl_zp_x, slo_zp_x,
+  clc, ora_abs_y, nop, slo_abs_y, nop, ora_abs_x, asl_abs_x, slo_abs_x,       // 0x1F
   jsr, and_ind_x, nan, nan, bit_zp, and_zp, rol_zp, nan,
   plp, and_imm, rol_acc, nan, bit_abs, and_abs, rol_abs, nan,     // 0x2F
   bmi, and_ind_y, nan, nan, nop, and_zp_x, rol_zp_x, nan,

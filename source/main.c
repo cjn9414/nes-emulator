@@ -165,12 +165,12 @@ int main(int argc, char **argv) {
   mapperSetup();
   registerPowerup(&regs);
   // Initialize the picture display.
-  //displayInit();
+  displayInit();
   // Run the emulator display and perform CPU step.
   while (1) {
     step();
-    //uint8_t displayClosed = runDisplay();
-    //if (displayClosed) break;
+    uint8_t displayClosed = runDisplay();
+    if (displayClosed) break;
 
   }
   // Free dynamically allocated memory.

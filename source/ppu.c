@@ -1,7 +1,7 @@
 #include <stdint.h>
 
 #include "ppu.h"
-#include "visualTest.h"
+#include "display.h"
 #include "cpu.h"
 
 
