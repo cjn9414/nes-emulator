@@ -5,8 +5,6 @@
 #include "registers.h"
 #include "MMC1.h"
 
-#include "ppu.h"  // will remove this eventually
-
 extern struct registers regs;
 
 // Declaring components of CPU memory. 

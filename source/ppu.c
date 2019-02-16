@@ -2,7 +2,7 @@
 
 #include "ppu.h"
 #include "display.h"
-#include "cpu.h"
+#include "memoryMappedIO.h"
 
 
 #define KB 1024

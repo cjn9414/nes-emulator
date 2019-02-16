@@ -4,6 +4,7 @@
 
 #include "cpu.h"
 #include "memory.h"
+#include "memoryMappedIO.h"
 #include "registers.h"
 #include "main.h"
 
