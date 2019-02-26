@@ -302,7 +302,8 @@ void getPatternData(SDL_Texture * tile, int offset, uint8_t idx) {
       // Find the color in the palette from the index, and 
       // set the respective address in the pixel data array to the color.
       
-      tilePixels[ (row * TILE_LEN) + (TILE_LEN-1-col) ] = /*imagePalette[idx];//*/color2int(palette[idx]);
+      tilePixels[ (row * TILE_LEN) + (TILE_LEN-1-col) ] = imagePalette[idx];//color2int(palette[idx]);
+      printf("%X", idx);
     }
   }
   // Set the texture for graphical update and display of pixel data.

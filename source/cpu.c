@@ -14,6 +14,8 @@ extern struct registers regs;
 extern uint8_t prg_rom_lower[0x4000];
 extern uint8_t prg_rom_upper[0x4000];
 
+uint32_t cycle = 0;
+
 void nan(uint8_t, uint8_t);
 
 /**
@@ -195,7 +197,7 @@ void nan(uint8_t garb0, uint8_t garb1) {
   exit(1);
 }
 
-void brk(uint8_t garb0, uint8_t garb1) { setFlagBreak(1); }  //0x00
+void brk(uint8_t garb0, uint8_t garb1) { setFlagBreak(1); }
 
 void adc_imm(uint8_t val, uint8_t res) {
   res = val + regs.a + getFlagCarry();
@@ -1648,6 +1650,35 @@ FunctionExecute functions[0x100] = {
 
 
 /**
+ * Updates the cycle counter of the CPU.
+ *
+ * @param len: length of the most recently executed cycle
+ * @param opcode: byte instruction that was last executed.
+ */
+void updateCycle(uint8_t len, unsigned char * opname) {
+  cycle += len;
+  if (regs.pc % 0x100 >= len - 1) {
+    switch (opname) {
+      case "ADC":
+      case "AND":
+      case "CMP":
+      case "CPX":
+      case "CPY":
+      case "EOR":
+      case "LDA":
+      case "LDX":
+      case "LDY":
+      case "ORA":
+      case "SBC":
+        cycle++;
+        break;
+    }
+  }
+  //TODO: Handle branch instruction cycles
+}
+
+
+/**
  * Reads the next instruction from the PRG-ROM
  * and executes it. Increments the stack pointer to
  * the next opcode instruction.
@@ -1656,17 +1687,18 @@ void step(void) {
   uint8_t opcode = readByte(regs.pc);
   uint8_t time = cycles[opcode];
   uint8_t len = opcodes[opcode].operands;
-  unsigned char * opName = opcodes[opcode].code;
+  unsigned char * opname = opcodes[opcode].code;
   uint8_t arg1, arg2;
   arg1 = readByte(regs.pc + 1);
   arg2 = readByte(regs.pc + 2);
   if (logger) {
     fprintf(logFile, "%x, %x %x %x %s  A:%x X:%x Y:%x P:%x SP:%x\n",
-      regs.pc, opcode, arg1, arg2, opName, regs.a, regs.x, regs.y, regs.p, regs.sp); 
+      regs.pc, opcode, arg1, arg2, opname, regs.a, regs.x, regs.y, regs.p, regs.sp); 
   }
   functions[opcode](arg1, arg2);
-  regs.pc += (strcmp(opName, "JSR") != 0 &&
-              strcmp(opName, "JMP") != 0 &&
-              strcmp(opName, "RTI") != 0) ? len : 0;
+  regs.pc += (strcmp(opname, "JSR") != 0 &&
+              strcmp(opname, "JMP") != 0 &&
+              strcmp(opname, "RTI") != 0) ? len : 0;
+  updateCycle(len, opname);
 }
 

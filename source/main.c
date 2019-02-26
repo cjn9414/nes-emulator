@@ -171,7 +171,6 @@ int main(int argc, char **argv) {
     step();
     uint8_t displayClosed = runDisplay();
     if (displayClosed) break;
-
   }
   // Free dynamically allocated memory.
   free(programData);

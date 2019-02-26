@@ -38,21 +38,11 @@ uint8_t readByte(uint16_t addr) {
   // Addressing the PPU registers in CPU memory.
   else if (addr < 0x2008) {
     switch (addr) {
-      case 0x2000:
-        return ppuRegisters.PPUControl;
-      case 0x2001:
-        return ppuRegisters.PPUMask;
       case 0x2002:
         ppuRegisters.PPUWriteLatch = 0;
         return ppuRegisters.PPUStatus;
-      case 0x2003:
-        return ppuRegisters.OAMAddress;
       case 0x2004:
         return ppuRegisters.OAMData;
-      case 0x2005:
-        return ppuRegisters.PPUScroll;
-      case 0x2006:
-        return ppuRegisters.PPUAddress;
       case 0x2007:
         {
         uint8_t val = readPictureByte(ppuRegisters.PPUWriteLatch);

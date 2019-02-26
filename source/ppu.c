@@ -44,6 +44,12 @@ unsigned int scanCount, cycleCount;
 uint8_t imagePalette[0x10];
 uint8_t spritePalette[0x10];
 
+/** 
+ * The following contains the bitmap data for the next
+ * two tiles to be displayed to the screen.
+ */
+
+
 // Defines the palette for the NES.
 const struct color palette[48] = {
   {0x75, 0x75, 0x75},
