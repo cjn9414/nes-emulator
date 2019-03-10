@@ -159,39 +159,37 @@ void renderTiles(void) {
 }
 
 /**
- * Loads a byte of pixel data onto the display. This is how NTSC
- * will display a picture onto a display.
+ * Loads a row of 8x8 pixel blocks onto the display. 
+ * This is a modified version of how NTSC will
+ * display a picture onto a screen.
  * 
  * @param tileSize: 8x8 pixel block that stores the dimension of a tile.
- * @param row: 0-7 row from the top of the block that is being displayed.
- * @param texture: optimized pixel data that is being displayed.
+ * @param row: The row of 8x8 pixel blocks being displayed.
  */
-void pushByteOntoDisplay(SDL_Rect * tileSize, uint8_t row, SDL_Texture * texture) {
-  return;
+void pushBlockOntoDisplay(SDL_Rect * tileSize, uint8_t row) {
+  uint8_t idx = 128*(row/4);
+  uint8_t offset;
+  if (row % 4 == 1) {
+    idx += 2;
+  } else if (row % 4 == 2) {
+    idx += 8;
+  } else if (row % 4 == 3) {
+    idx += 10;
+  }
+  for (uint8_t i = 0; i < TILE_ROW; i++) {
+    offset = 16*(i/4);
+    if (i % 4 == 1) {
+      offset++;
+    } else if (i % 4 == 2) {
+      offset += 4;
+    } else if (i % 4 == 3) {
+      offset += 5;
+    }
+    SDL_Texture * t = display.texture[idx + offset];
+    SDL_RenderCopy(display.renderer, texture, NULL, &loc);
+    tileSize.x += TILE_LEN;
+  }
 }
-
-
-/**
- * Gets a byte at a specific index from the name table.
- * 
- * @param idx: offset in bytes from the start of the name table.
- */
-uint8_t fetchNTByte(uint8_t idx) {
-  return;
-}
-
-
-/**
- * Gets a byte at a specific index from the attribute table.
- * 
- * @param idx: offset in bytes from the start of the
- *             attribute table.
- */
-uint8_t fetchATByte(uint8_t idx) {
-  return;
-}
-
-
 
 
 /**

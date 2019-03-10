@@ -14,7 +14,7 @@ extern struct registers regs;
 extern uint8_t prg_rom_lower[0x4000];
 extern uint8_t prg_rom_upper[0x4000];
 
-uint32_t cycle = 0;
+uint32_t cycle = 7;
 
 void nan(uint8_t, uint8_t);
 
@@ -179,6 +179,7 @@ void SZFlags(uint8_t val) {
  *             program counter backwards.
  */
 void branchJump(uint8_t val) {
+  cycle += 1;
   if (!getBit(val, 7)) {
     regs.pc += val;
   } else {
@@ -237,12 +238,14 @@ void adc_ind_x(uint8_t val, uint8_t res) {
 
 void adc_ind_y(uint8_t val, uint8_t res) {
   uint16_t addr = readZeroPage(val) + (readZeroPage(val + 1) << 8);
-  val = readByte(addr + regs.y);
+  addr += regs.y;
+  val = readByte(addr);
   res = val + regs.a + getFlagCarry();
   VFlag(val, regs.a, res);
   res < regs.a ? setFlagCarry(1) : setFlagCarry(0);
   regs.a = res;
   SZFlags(regs.a);
+  updateCycle(addr, regs.y);
 }
 
 void adc_abs(uint8_t lower, uint8_t upper) {
@@ -265,6 +268,7 @@ void adc_abs_x(uint8_t lower, uint8_t upper) {
   res < regs.a ? setFlagCarry(1) : setFlagCarry(0);
   regs.a = res;
   SZFlags(regs.a); 
+  updateCycle(addr, regs.x);
 }
 
 void adc_abs_y(uint8_t lower, uint8_t upper) {
@@ -276,6 +280,7 @@ void adc_abs_y(uint8_t lower, uint8_t upper) {
   res < regs.a ? setFlagCarry(1) : setFlagCarry(0);
   regs.a = res;
   SZFlags(regs.a); 
+  updateCycle(addr, regs.y);
 }
 
 void and_ind_x(uint8_t val, uint8_t garb) {
@@ -287,9 +292,11 @@ void and_ind_x(uint8_t val, uint8_t garb) {
 
 void and_ind_y(uint8_t val, uint8_t garb) {
   uint16_t addr = (readZeroPage(val + 1) << 8) + readZeroPage(val); 
-  val = regs.a & readByte(addr + regs.y);
+  addr += regs.y;
+  val = regs.a & readByte(addr);
   SZFlags(val);
   regs.a = val;
+  updateCycle(addr, regs.y);
 }
 
 void and_imm(uint8_t val, uint8_t garb) {
@@ -322,6 +329,7 @@ void and_abs_x(uint8_t lower, uint8_t upper) {
   lower = readByte(addr) & regs.a;
   SZFlags(lower);
   regs.a = lower;
+  updateCycle(addr, regs.x);
 }
 
 void and_abs_y(uint8_t lower, uint8_t upper) {
@@ -329,6 +337,7 @@ void and_abs_y(uint8_t lower, uint8_t upper) {
   lower = readByte(addr) & regs.a;
   SZFlags(lower);
   regs.a = lower;
+  updateCycle(addr, regs.y);
 }
 
 void asl_acc(uint8_t garb0, uint8_t garb1) { 
@@ -457,8 +466,10 @@ void cmp_ind_x(uint8_t val, uint8_t garb) {
 void cmp_ind_y(uint8_t val, uint8_t garb) {
   uint16_t addr;
   addr = (readZeroPage(val + 1) << 8) + readZeroPage(val);
-  val = readByte(addr + regs.y);
+  addr += regs.y;
+  val = readByte(addr);
   flagCompare(regs.a, val);
+  updateCycle(addr, regs.y);
 }
 
 void cmp_abs(uint8_t lower, uint8_t upper) {
@@ -471,12 +482,14 @@ void cmp_abs_x(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower + regs.x;
   lower = readByte(addr);
   flagCompare(regs.a, lower);
+  updateCycle(addr, regs.x);
 }
 
 void cmp_abs_y(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower + regs.y;
   lower = readByte(addr);
   flagCompare(regs.a, lower);
+  updateCycle(addr, regs.y);
 }
 
 void cpx_imm(uint8_t val, uint8_t garb) {
@@ -562,8 +575,10 @@ void eor_ind_x(uint8_t val, uint8_t garb) {
 
 void eor_ind_y(uint8_t val, uint8_t garb) {
   uint16_t addr = (readZeroPage(val + 1) << 8) + readZeroPage(val);
-  regs.a = regs.a ^ readByte(addr + regs.y);
+  addr += regs.y;
+  regs.a = regs.a ^ readByte(addr);
   SZFlags(regs.a);
+  updateCycle(addr, regs.y);
 }
 
 void eor_abs(uint8_t lower, uint8_t upper) {
@@ -576,12 +591,14 @@ void eor_abs_x(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower + regs.x;
   regs.a = regs.a ^ readByte(addr);
   SZFlags(regs.a);
+  updateCycle(addr, regs.x);
 }
 
 void eor_abs_y(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower + regs.y;
   regs.a = regs.a ^ readByte(addr);
   SZFlags(regs.a);
+  updateCycle(addr, regs.y);
 }
 
 void clc(uint8_t garb0, uint8_t garb1) { setFlagCarry(0); }
@@ -668,6 +685,7 @@ void ldx_abs_y(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower + regs.y;
   regs.x = readByte(addr);
   SZFlags(regs.x);
+  updateCycle(addr, regs.y);
 }
 
 void ldy_imm(uint8_t addr, uint8_t garb) {
@@ -695,6 +713,7 @@ void ldy_abs_x(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower + regs.x;
   regs.y = readByte(addr);
   SZFlags(regs.y);
+  updateCycle(addr, regs.x);
 }
 
 
@@ -723,12 +742,14 @@ void lda_abs_x(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower + regs.x;
   regs.a = readByte(addr);
   SZFlags(regs.a);
+  updateCycle(addr, regs.x);
 }
 
 void lda_abs_y(uint8_t lower, uint8_t upper) {
   uint16_t addr = (upper << 8) + lower + regs.y;
   regs.a = readByte(addr);
   SZFlags(regs.a);
+  updateCycle(addr, regs.y);
 }
 
 void lda_ind_x(uint8_t val, uint8_t garb) {
@@ -739,8 +760,10 @@ void lda_ind_x(uint8_t val, uint8_t garb) {
 
 void lda_ind_y(uint8_t val, uint8_t garb) {
   uint16_t addr = (readZeroPage(val + 1) << 8) + readZeroPage(val);
-  regs.a = readByte(addr + regs.y);
+  addr += regs.y;
+  regs.a = readByte(addr);
   SZFlags(regs.a);
+  updateCycle(addr, regs.y);
 }
 
 void lsr_acc(uint8_t garb0, uint8_t garb1) { 
@@ -793,9 +816,11 @@ void ora_ind_x(uint8_t val, uint8_t garb) {
 
 void ora_ind_y(uint8_t val, uint8_t garb) {
   uint16_t addr = (readZeroPage(val + 1) << 8) + readZeroPage(val); 
-  val = regs.a | readByte(addr + regs.y);
+  addr += regs.y;
+  val = regs.a | readByte(addr);
   SZFlags(val);
   regs.a = val;
+  updateCycle(addr, regs.y);
 }
 
 void ora_imm(uint8_t val, uint8_t garb) {   //0x09
@@ -828,6 +853,7 @@ void ora_abs_x(uint8_t lower, uint8_t upper) {
   lower = readByte(addr) | regs.a;
   SZFlags(lower);
   regs.a = lower;
+  updateCycle(addr, regs.x);
 }
 
 void ora_abs_y(uint8_t lower, uint8_t upper) {
@@ -835,6 +861,7 @@ void ora_abs_y(uint8_t lower, uint8_t upper) {
   lower = readByte(addr) | regs.a;
   SZFlags(lower);
   regs.a = lower;
+  updateCycle(addr, regs.x);
 }
 
 void tax(uint8_t garb0, uint8_t garb1) {
@@ -1022,12 +1049,14 @@ void sbc_ind_x(uint8_t val, uint8_t garbage) {
 void sbc_ind_y(uint8_t val, uint8_t garbage) {
   uint16_t addr;
   addr = readZeroPage(val) + (readZeroPage(val + 1) << 8);
-  val = ~readByte(addr + regs.y) + 1 - (getFlagCarry() ? 0 : 1);
+  addr += regs.y;
+  val = ~readByte(addr) + 1 - (getFlagCarry() ? 0 : 1);
   garbage = val + regs.a;
   VFlag(val, regs.a, garbage);
   regs.a = garbage;
   SZFlags(regs.a);
   (garbage >= 0 && garbage < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
+  updateCycle(addr, regs.y);
 }
 
 void sbc_abs(uint8_t lower, uint8_t upper) {
@@ -1052,6 +1081,7 @@ void sbc_abs_x(uint8_t lower, uint8_t upper) {
   regs.a = res;
   SZFlags(regs.a);
   (res >= 0 && res < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
+  updateCycle(addr, regs.x);
 }
 
 
@@ -1065,6 +1095,7 @@ void sbc_abs_y(uint8_t lower, uint8_t upper) {
   regs.a = res;
   SZFlags(regs.a);
   (res >= 0 && res < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
+  updateCycle(addr, regs.y);
 }
 
 
@@ -1655,26 +1686,38 @@ FunctionExecute functions[0x100] = {
  * @param len: length of the most recently executed cycle
  * @param opcode: byte instruction that was last executed.
  */
-void updateCycle(uint8_t len, unsigned char * opname) {
-  cycle += len;
-  if (regs.pc % 0x100 >= len - 1) {
-    switch (opname) {
-      case "ADC":
-      case "AND":
-      case "CMP":
-      case "CPX":
-      case "CPY":
-      case "EOR":
-      case "LDA":
-      case "LDX":
-      case "LDY":
-      case "ORA":
-      case "SBC":
-        cycle++;
-        break;
-    }
+void updateCycle(uint16_t addr, uint8_t offset) {
+  printf("  %X %X  ", addr, offset);
+  if (addr & 0x00FF < offset) {
+    cycle++;
   }
-  //TODO: Handle branch instruction cycles
+    //switch (opcode) {
+      //case 0x7D:  // ADC
+      //case 0x79:
+      //case 0x71:
+      //case 0x3D:  // AND
+      //case 0x39:
+      //case 0x31:
+      //case 0xDD:  // CMP
+      //case 0xD9:
+      //case 0xD1:
+      //case 0x5D:  // EOR
+      //case 0x59:
+      //case 0x51:
+      //case 0xBD:  // LDA
+      //case 0xB9:
+      //case 0xB1:
+      //case 0xBE:  // LDX
+      //case 0xBC:  // LDY
+      //case 0x1D:  // ORA
+      //case 0x19:
+      //case 0x11:
+      //case 0xFD:  // SBC
+      //case 0xF9:
+      //case 0xF1:
+        //cycle++;
+        //break;
+  //}
 }
 
 
@@ -1692,13 +1735,12 @@ void step(void) {
   arg1 = readByte(regs.pc + 1);
   arg2 = readByte(regs.pc + 2);
   if (logger) {
-    fprintf(logFile, "%x, %x %x %x %s  A:%x X:%x Y:%x P:%x SP:%x\n",
-      regs.pc, opcode, arg1, arg2, opname, regs.a, regs.x, regs.y, regs.p, regs.sp); 
+    fprintf(logFile, "%x, %x %x %x %s  A:%x X:%x Y:%x P:%x SP:%x CYCLE:%d\n",
+      regs.pc, opcode, arg1, arg2, opname, regs.a, regs.x, regs.y, regs.p, regs.sp, cycle); 
   }
   functions[opcode](arg1, arg2);
+  cycle += time;
   regs.pc += (strcmp(opname, "JSR") != 0 &&
               strcmp(opname, "JMP") != 0 &&
               strcmp(opname, "RTI") != 0) ? len : 0;
-  updateCycle(len, opname);
 }
-
