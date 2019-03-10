@@ -186,8 +186,8 @@ void pushBlockOntoDisplay(SDL_Rect * tileSize, uint8_t row) {
       offset += 5;
     }
     SDL_Texture * t = display.texture[idx + offset];
-    SDL_RenderCopy(display.renderer, texture, NULL, &loc);
-    tileSize.x += TILE_LEN;
+    SDL_RenderCopy(display.renderer, t, NULL, &tileSize);
+    tileSize -> x += TILE_LEN;
   }
 }
 
