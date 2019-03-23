@@ -17,7 +17,8 @@
 typedef struct {
   SDL_Renderer *renderer;
   SDL_Window *window;
-  SDL_Texture *texture[TILE_ROW*TILE_COL];
+  //SDL_Texture *texture[TILE_ROW*TILE_COL];
+  SDL_Texture *scanlineTexture;
 } EmuDisplay; 
 
 // Define an instance of the EmuDisplay
@@ -44,9 +45,7 @@ extern struct Header head;
 void cleanup(void) {
   SDL_DestroyRenderer(display.renderer); 
   SDL_DestroyWindow(display.window); 
-  for (int i = 0; i < TILE_ROW*TILE_COL; i++) {
-    SDL_DestroyTexture(display.texture[i]);
-  }
+  SDL_DestroyTexture(display.scanlineTexture);
   SDL_Quit();
 }
 
@@ -87,9 +86,6 @@ void displayInit(void) {
 		printf("Failed to create renderer: %s\n", SDL_GetError());
     exit(1);
   }
-
-  // Create and load textures with pixel data.
-  loadTiles();
   atexit(cleanup);
 }
 
@@ -108,216 +104,261 @@ Uint32 color2int(struct color c) {
 
 
 /**
- * Maps the previously prepared SDL_Textures to an area on the display.
- */
-void renderTiles(void) {
-  // Iterate through the size of the display in number of tiles.
-  for (int i = 0; i < TILE_ROW*TILE_COL; i += 2) {
-    
-    // Declare an SDL_Rect variable to store location and size of
-    // a tile on the screen.
-    SDL_Rect loc;
-
-    // Update SDL_Rect instance to represent top-left tile of a 
-    // 2x2 tile area on the screen.
-    loc = (SDL_Rect) { TILE_LEN*(i%TILE_ROW), TILE_LEN*(i/TILE_ROW),
-      TILE_LEN, TILE_LEN };
-    
-    // Find the texture to render and copy it to the display
-    // at the correct location.
-    //SDL_Texture * textureToRender = display.texture[nTable0.tbl[i]];
-    SDL_Texture * textureToRender = display.texture[i];
-    SDL_RenderCopy(display.renderer, textureToRender, NULL, &loc);
-    
-    // Update SDL_Rect instance to represent top-right tile of a 
-    // 2x2 tile area on the screen.
-    loc = (SDL_Rect) { TILE_LEN + TILE_LEN*(i%TILE_ROW),
-      TILE_LEN*(i/TILE_ROW), TILE_LEN, TILE_LEN};
-    
-    //textureToRender = display.texture[nTable0.tbl[i+1]];
-    textureToRender = display.texture[i+1];
-    SDL_RenderCopy(display.renderer, textureToRender, NULL, &loc);
-    
-    // Update SDL_Rect instance to represent bottom-left 
-    // tile of a 2x2 tile area on the screen.
-    loc = (SDL_Rect) { TILE_LEN*(i%TILE_ROW),
-      TILE_LEN + TILE_LEN*(i/TILE_ROW), TILE_LEN, TILE_LEN };
-    
-    //textureToRender = display.texture[nTable0.tbl[i+2]];
-    textureToRender = display.texture[i+2];
-    SDL_RenderCopy(display.renderer, textureToRender, NULL, &loc);
-    
-    // Update SDL_Rect instance to represent bottom-right
-    // tile of a 2x2 tile area on the screen.
-    loc = (SDL_Rect) { TILE_LEN + TILE_LEN*(i%TILE_ROW),
-      TILE_LEN + TILE_LEN*(i/TILE_ROW), TILE_LEN, TILE_LEN };
-    
-    //textureToRender = display.texture[nTable0.tbl[i+3]];
-    textureToRender = display.texture[i+3];
-    SDL_RenderCopy(display.renderer, textureToRender, NULL, &loc);
-  }
-}
-
-/**
- * Loads a row of 8x8 pixel blocks onto the display. 
- * This is a modified version of how NTSC will
- * display a picture onto a screen.
- * 
- * @param tileSize: 8x8 pixel block that stores the dimension of a tile.
- * @param row: The row of 8x8 pixel blocks being displayed.
- */
-void pushBlockOntoDisplay(SDL_Rect * tileSize, uint8_t row) {
-  uint8_t idx = 128*(row/4);
-  uint8_t offset;
-  if (row % 4 == 1) {
-    idx += 2;
-  } else if (row % 4 == 2) {
-    idx += 8;
-  } else if (row % 4 == 3) {
-    idx += 10;
-  }
-  for (uint8_t i = 0; i < TILE_ROW; i++) {
-    offset = 16*(i/4);
-    if (i % 4 == 1) {
-      offset++;
-    } else if (i % 4 == 2) {
-      offset += 4;
-    } else if (i % 4 == 3) {
-      offset += 5;
-    }
-    SDL_Texture * t = display.texture[idx + offset];
-    SDL_RenderCopy(display.renderer, t, NULL, &tileSize);
-    tileSize -> x += TILE_LEN;
-  }
-}
-
-
-/**
- * Iterate through the attribute table to get the most
- * significant two bits of the index that addresses a color
- * from the color palette for each tile in the display.
- * This index is passed into a function that both retrieves
- * the lower two bits of the index, and loads the pixel data
- * into each tile's pixel data array.
- */
-void loadTiles(void) {
-  // Declare index used to address color in the color palette.
-  uint8_t idx;
-  int offset;
-  // Iterate through the size of the attribute table, in bytes.
-  for (uint8_t i = 0; i < 64; i++) {
-    // Iterate though the number of tiles per byte of the attribute table.
-    for (uint8_t j = 0; j < 16; j++) { 
-      // Define the pointer to the SDL_Texture representing the tile.
-      SDL_Texture * tile = SDL_CreateTexture(display.renderer,
-        SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 
-        TILE_LEN, TILE_LEN);
-      // Error creating the SDL_Texture.
-      if (tile == NULL) {
-        SDL_Log("SDL_CreateTexture() failed: %s", SDL_GetError());
-        exit(1);
-      }
-      // Define the offset of the tile data in the pattern table.
-      // May be incremented before it is used next.
-      offset = 4*(i%TILE_LEN) + 128*(i/TILE_LEN);
-      // Upper-left quadrant.
-      if (j < 4) {
-        idx = (0x3 & nTable0.attr[i]) << 2;   // get bits 1/0
-      } 
-      // Upper-right quadrant.
-      else if (j < 8) {
-        offset += 2;
-        idx = 0xC & nTable0.attr[i];          // get bits 3/2
-      } 
-      // Lower-left quadrant.
-      else if (j < 12) {
-        offset += 2*TILE_ROW;
-        idx = (0x30 & nTable0.attr[i]) >> 2;  // get bits 5/4
-      } 
-      // Lower-right quadrant.
-      else {
-        offset += 2*TILE_ROW + 2;
-        idx = (0xC0 & nTable0.attr[i]) >> 4;  // get bits 7/6
-      }
-      // Lower two tiles of 2x2 tile area. Offset incremented by fill tile row.
-      if (j % 4 > 1) offset += TILE_ROW;
-
-      // Right two tiles of 2x2 tile area. Offset incremented by one.
-      if (j % 2 == 1) offset += 1;
-      
-      // Loads pixel data into SDL_Texture.
-      getPatternData(tile, offset, idx);
-      // Edge case, as the upper nybble of each byte in the attribute table
-      // in the last row is not used.
-      if (i >= 56) {
-        if (j < 8) {
-          display.texture[(16*56) + 8*(i-56) + j] = tile;
-        }
-      } else display.texture[j + (16*i)] = tile;
-    }
-  }
-}
-
-
-/**
- * Loads pixel data from a pattern table into an SDL_Texture.
+ * Renders a scanline of pixel data onto the display.
  *
- * @param tile: Pointer to an instance of an SDL_Texture.
- * @param offset: Offset of the tile data in the pattern
- *                table from the start of the table.
- * @param idx: Index of the color used for a pixel in the color palette.
- *             The palette is indexed by four bits, and this parameter
- *             is passed into the function with the most significant
- *             two bits evaluated. The lower two bits are added to this
- *             value in the function to complete the four bit index.
+ * @param buffer: pointer to the scanline of pixel data.
+ * @param scanline: current scanline (row) that is being displayed.
  */
-void getPatternData(SDL_Texture * tile, int offset, uint8_t idx) {
-  // Flattened array pointer to contain pixel data.
-  uint32_t * pixels;
-  int pitch;
-  
-  // Set the texture for write only access to pixel data.
-  SDL_LockTexture(tile, NULL, (void **)&pixels, &pitch); 
-  
-  // Define the pointer to the pixel data for a tile.
-  Uint32 * tilePixels = (Uint32*) pixels;
-  
-  // Define a variable that holds that two most significant bits
-  // of the four bit index.
-  uint8_t upperBits = idx;
-  // Iterate through each byte in a tile from the pattern table.
-  for (int row = 0; row < TILE_LEN; row++) {
-    // Get two dependent bytes from the tile.
-    uint8_t b1 = pTable0[offset+row];
-    uint8_t b2 = pTable0[offset+row+TILE_LEN];
+void renderScanline(uint8_t *buffer, uint8_t scanline) {
 
-    // Iterate through each bit of the specified bytes.
-    for (int col = TILE_LEN-1; col >= 0; col--) {
-      // Append upper two bits and lower two bits to find the index.
-      idx = upperBits | getBit(b1, col);
-      idx = upperBits | (getBit(b2, col) << 1);
-      
-      // Find the color in the palette from the index, and 
-      // set the respective address in the pixel data array to the color.
-      
-      tilePixels[ (row * TILE_LEN) + (TILE_LEN-1-col) ] = imagePalette[idx];//color2int(palette[idx]);
-      printf("%X", idx);
+  uint8_t paletteIdx = 0;
+  uint8_t fetchCycle = 0;
+  uint32_t * pixels;
+
+  SDL_LockTexture(display.scanlineTexture, NULL, (void **)&pixels, NULL); 
+  
+  Uint32 * scanlinePixels = (Uint32*) pixels;
+  
+  for (int i = 0; i < 32; i++) {
+    for (int cycleCount = 0; cycleCount < 8; cycleCount++) {
+      if (scanline % 8 < 4) {
+        if (cycleCount % 2 == 0) {
+          paletteIdx = (*(buffer+3*i) & 0b11000000) >> 4;
+        } else {
+          paletteIdx = (*(buffer+3*i) & 0b00110000) >> 2;
+        }
+      } else if (cycleCount % 2 == 0) {
+        paletteIdx = (*(buffer+3*i) & 0b00001100);
+      } else {
+        paletteIdx = (*(buffer+3*i) & 0b00000011) << 2;
+      }
+
+      paletteIdx |= ( *(buffer+3*i+1) & ( (1 << 7-cycleCount ) >> ( cycleCount-7 ) ) ) << 1;
+      paletteIdx |=   *(buffer+3*i+2) & ( (1 << 7-cycleCount ) >> ( cycleCount-7 ) );
+
+      Uint32 colorValue = color2int(palette[imagePalette[paletteIdx]]);
+
+      *(scanlinePixels + 8*i + cycleCount) = colorValue; 
     }
   }
-  // Set the texture for graphical update and display of pixel data.
-  SDL_UnlockTexture(tile);
+
+  SDL_UnlockTexture(display.scanlineTexture);
+
+  SDL_Rect line = (SDL_Rect) { 0, scanline, 256, 1};
+  SDL_RenderCopy(display.renderer, display.scanlineTexture, NULL, &line);
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+///**
+// * Maps the previously prepared SDL_Textures to an area on the display.
+// */
+//void renderTiles(void) {
+//  // Iterate through the size of the display in number of tiles.
+//  for (int i = 0; i < TILE_ROW*TILE_COL; i += 2) {
+//    
+//    // Declare an SDL_Rect variable to store location and size of
+//    // a tile on the screen.
+//    SDL_Rect loc;
+//
+//    // Update SDL_Rect instance to represent top-left tile of a 
+//    // 2x2 tile area on the screen.
+//    loc = (SDL_Rect) { TILE_LEN*(i%TILE_ROW), TILE_LEN*(i/TILE_ROW),
+//      TILE_LEN, TILE_LEN };
+//    
+//    // Find the texture to render and copy it to the display
+//    // at the correct location.
+//    //SDL_Texture * textureToRender = display.texture[nTable0.tbl[i]];
+//    SDL_Texture * textureToRender = display.texture[i];
+//    SDL_RenderCopy(display.renderer, textureToRender, NULL, &loc);
+//    
+//    // Update SDL_Rect instance to represent top-right tile of a 
+//    // 2x2 tile area on the screen.
+//    loc = (SDL_Rect) { TILE_LEN + TILE_LEN*(i%TILE_ROW),
+//      TILE_LEN*(i/TILE_ROW), TILE_LEN, TILE_LEN};
+//    
+//    //textureToRender = display.texture[nTable0.tbl[i+1]];
+//    textureToRender = display.texture[i+1];
+//    SDL_RenderCopy(display.renderer, textureToRender, NULL, &loc);
+//    
+//    // Update SDL_Rect instance to represent bottom-left 
+//    // tile of a 2x2 tile area on the screen.
+//    loc = (SDL_Rect) { TILE_LEN*(i%TILE_ROW),
+//      TILE_LEN + TILE_LEN*(i/TILE_ROW), TILE_LEN, TILE_LEN };
+//    
+//    //textureToRender = display.texture[nTable0.tbl[i+2]];
+//    textureToRender = display.texture[i+2];
+//    SDL_RenderCopy(display.renderer, textureToRender, NULL, &loc);
+//    
+//    // Update SDL_Rect instance to represent bottom-right
+//    // tile of a 2x2 tile area on the screen.
+//    loc = (SDL_Rect) { TILE_LEN + TILE_LEN*(i%TILE_ROW),
+//      TILE_LEN + TILE_LEN*(i/TILE_ROW), TILE_LEN, TILE_LEN };
+//    
+//    //textureToRender = display.texture[nTable0.tbl[i+3]];
+//    textureToRender = display.texture[i+3];
+//    SDL_RenderCopy(display.renderer, textureToRender, NULL, &loc);
+//  }
+//}
+//
+//
+///**
+// * Iterate through the attribute table to get the most
+// * significant two bits of the index that addresses a color
+// * from the color palette for each tile in the display.
+// * This index is passed into a function that both retrieves
+// * the lower two bits of the index, and loads the pixel data
+// * into each tile's pixel data array.
+// */
+//void loadTiles(void) {
+//  // Declare index used to address color in the color palette.
+//  uint8_t idx;
+//  int offset;
+//  // Iterate through the size of the attribute table, in bytes.
+//  for (uint8_t i = 0; i < 64; i++) {
+//    // Iterate though the number of tiles per byte of the attribute table.
+//    for (uint8_t j = 0; j < 16; j++) { 
+//      // Define the pointer to the SDL_Texture representing the tile.
+//      SDL_Texture * tile = SDL_CreateTexture(display.renderer,
+//        SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 
+//        TILE_LEN, TILE_LEN);
+//      // Error creating the SDL_Texture.
+//      if (tile == NULL) {
+//        SDL_Log("SDL_CreateTexture() failed: %s", SDL_GetError());
+//        exit(1);
+//      }
+//      // Define the offset of the tile data in the pattern table.
+//      // May be incremented before it is used next.
+//      offset = 4*(i%TILE_LEN) + 128*(i/TILE_LEN);
+//      // Upper-left quadrant.
+//      if (j < 4) {
+//        idx = (0x3 & nTable0.attr[i]) << 2;   // get bits 1/0
+//      } 
+//      // Upper-right quadrant.
+//      else if (j < 8) {
+//        offset += 2;
+//        idx = 0xC & nTable0.attr[i];          // get bits 3/2
+//      } 
+//      // Lower-left quadrant.
+//      else if (j < 12) {
+//        offset += 2*TILE_ROW;
+//        idx = (0x30 & nTable0.attr[i]) >> 2;  // get bits 5/4
+//      } 
+//      // Lower-right quadrant.
+//      else {
+//        offset += 2*TILE_ROW + 2;
+//        idx = (0xC0 & nTable0.attr[i]) >> 4;  // get bits 7/6
+//      }
+//      // Lower two tiles of 2x2 tile area. Offset incremented by fill tile row.
+//      if (j % 4 > 1) offset += TILE_ROW;
+//
+//      // Right two tiles of 2x2 tile area. Offset incremented by one.
+//      if (j % 2 == 1) offset += 1;
+//      
+//      // Loads pixel data into SDL_Texture.
+//      getPatternData(tile, offset, idx);
+//      // Edge case, as the upper nybble of each byte in the attribute table
+//      // in the last row is not used.
+//      if (i >= 56) {
+//        if (j < 8) {
+//          display.texture[(16*56) + 8*(i-56) + j] = tile;
+//        }
+//      } else display.texture[j + (16*i)] = tile;
+//    }
+//  }
+//}
+//
+//
+///**
+// * Loads pixel data from a pattern table into an SDL_Texture.
+// *
+// * @param tile: Pointer to an instance of an SDL_Texture.
+// * @param offset: Offset of the tile data in the pattern
+// *                table from the start of the table.
+// * @param idx: Index of the color used for a pixel in the color palette.
+// *             The palette is indexed by four bits, and this parameter
+// *             is passed into the function with the most significant
+// *             two bits evaluated. The lower two bits are added to this
+// *             value in the function to complete the four bit index.
+// */
+//void getPatternData(SDL_Texture * tile, int offset, uint8_t idx) {
+//  // Flattened array pointer to contain pixel data.
+//  uint32_t * pixels;
+//  int pitch;
+//  
+//  // Set the texture for write only access to pixel data.
+//  SDL_LockTexture(tile, NULL, (void **)&pixels, &pitch); 
+//  
+//  // Define the pointer to the pixel data for a tile.
+//  Uint32 * tilePixels = (Uint32*) pixels;
+//  
+//  // Define a variable that holds that two most significant bits
+//  // of the four bit index.
+//  uint8_t upperBits = idx;
+//  // Iterate through each byte in a tile from the pattern table.
+//  for (int row = 0; row < TILE_LEN; row++) {
+//    // Get two dependent bytes from the tile.
+//    uint8_t b1 = pTable0[offset+row];
+//    uint8_t b2 = pTable0[offset+row+TILE_LEN];
+//
+//    // Iterate through each bit of the specified bytes.
+//    for (int col = TILE_LEN-1; col >= 0; col--) {
+//      // Append upper two bits and lower two bits to find the index.
+//      idx = upperBits | getBit(b1, col);
+//      idx = upperBits | (getBit(b2, col) << 1);
+//      
+//      // Find the color in the palette from the index, and 
+//      // set the respective address in the pixel data array to the color.
+//      
+//      tilePixels[ (row * TILE_LEN) + (TILE_LEN-1-col) ] = imagePalette[idx];//color2int(palette[idx]);
+//      printf("%X", idx);
+//    }
+//  }
+//  // Set the texture for graphical update and display of pixel data.
+//  SDL_UnlockTexture(tile);
+//}
 
 
 /**
  * Prepares the window display before
  * each frame during runtime.
  */
-void prepareScene(void)
-{
-  SDL_RenderClear(display.renderer);
-  renderTiles();
-}
+//void prepareScene(void)
+//{
+//  SDL_RenderClear(display.renderer);
+//}
 
 /**
  * Renders the window display with an
@@ -360,7 +401,7 @@ uint8_t handleEvent(void) {
  */
 uint8_t runDisplay(void)
 {
-	prepareScene();
+	//prepareScene();
 	if (!handleEvent()) return 1;
 	presentScene();	
 	SDL_Delay(16);

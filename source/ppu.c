@@ -17,6 +17,10 @@
  */
 #define H_BLANK_START 258
 
+
+// 30 standard fetch cycles, two pre-render fetch cycles 
+#define FETCH_CYCLES_PER_SCANLINE 32
+
 // V-blank starts at scanline 241 (post-render line at 240).
 // Pre-render line at scanline 261 (V-blank lasts 20 cycles).
 #define V_BLANK_START 241
@@ -40,15 +44,17 @@ enum ScanlineStatus cycleType;
 // Stores the current count for the scanline and each cycle within.
 unsigned int scanCount, cycleCount; 
 
+// Stores the more recent nametable byte that was fetched.
+uint8_t NTByte;
+
 // Declares the image and sprite palettes in PPU memory.
 uint8_t imagePalette[0x10];
 uint8_t spritePalette[0x10];
 
-/** 
- * The following contains the bitmap data for the next
- * two tiles to be displayed to the screen.
+/** Four bytes in a fetch cycle
+ *  NT Byte, AT Byte, Low BG Tile Byte, High BG Tile Byte
  */
-
+uint8_t pixelBuffer[3*FETCH_CYCLES_PER_SCANLINE];
 
 // Defines the palette for the NES.
 const struct color palette[48] = {
@@ -118,6 +124,60 @@ const struct color palette[48] = {
   {0x00, 0x00, 0x00},
 };
 
+/**
+ * Gets a byte at a specific index from the name table.
+ * 
+ * @param idx: offset in bytes from the start of the name table.
+ */
+uint8_t fetchNTByte(uint8_t idx) {
+  return nTable0.tbl[idx];
+}
+
+
+/**
+ * Gets a byte at a specific index from the attribute table.
+ * 
+ * @param idx: offset in bytes from the start of the
+ *             attribute table.
+ */
+uint8_t fetchATByte(uint8_t idx) {
+  if (cycleType == PRE_FETCH) {
+    idx -= FETCH_CYCLES_PER_SCANLINE-2;
+    pixelBuffer[idx*3] = nTable0.attr[idx];
+  } 
+  else {
+    pixelBuffer[(idx+2)*3] = nTable0.attr[(idx/4)%8 + idx/(32*4)];
+  }
+}
+
+
+/**
+ * Fetches a low background tile byte on a given cycle of the PPU.
+ */
+uint8_t fetchLowBGTileByte(uint8_t idx) {
+  if (cycleType == PRE_FETCH) {
+    idx -= FETCH_CYCLES_PER_SCANLINE-2;
+    pixelBuffer[idx*3+1] = pTable0[idx];
+  } 
+  else {
+    pixelBuffer[(idx+2)*3 + 1] = pTable0[idx];
+  }
+}
+
+/**
+ * Fetches a high background tile byte on a given cycle of the PPU.
+ */
+uint8_t fetchHighBGTileByte(uint8_t idx) {
+  pixelBuffer[(idx+2)*3 + 2] = pTable0[idx + 8];
+}
+
+/**
+ * Send the pixel data that is in the buffer 
+ * to the display which renders the scanline.
+ */
+void flushPixelBuffer(void) {
+  renderScanline(pixelBuffer, scanCount);
+}
 
 /**
  * HORIZONTAL:
@@ -147,6 +207,7 @@ void setMirroring(enum MirroringType newMirror) {
  * Uses NTSC timing.
  */
 void ppuStep(void) {
+
   // Handle state of the current scanline and cycle.
   switch (cycleCount) {
     case 0:
@@ -159,7 +220,7 @@ void ppuStep(void) {
       else if (scanCount == 241) lineType = V_BLANK;
       else if (scanCount == 261) lineType = PRE_RENDER;
       break;
-    case 249:
+    case 241://249:
       cycleType = UNUSED_FETCH;
       break;
     case 258:
@@ -167,6 +228,7 @@ void ppuStep(void) {
       break;
     case 321:
       cycleType = PRE_FETCH;
+      flushPixelBuffer();
       break;
     case 337:
       cycleType = UNUSED_FETCH;
@@ -174,7 +236,21 @@ void ppuStep(void) {
     default:
       break;
   }
-  //TODO: Handle events dependent on the scanline and cycle.
+
+
+  if (lineType == STANDARD_FETCH || PRE_FETCH) {
+    if (cycleCount % 8 == 1) {
+      NTByte = fetchNTByte((cycleCount + scanCount*32) / 8);
+    } else if (cycleCount % 8 == 3) {
+      fetchATByte((cycleCount + scanCount*32) / 8);
+    } else if (cycleCount % 8 == 5) {
+      fetchLowBGTileByte(NTByte);
+    } else if (cycleCount % 8 == 7) {
+      fetchHighBGTileByte(NTByte);
+    }
+  }
+
+  if (cycleCount == 256) { scanCount++; }
 
   // Increment the cycle and reset it if it equals 340.
   cycleCount = cycleCount == 340 ? 0 : cycleCount + 1;
