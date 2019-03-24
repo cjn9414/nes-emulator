@@ -32,4 +32,5 @@ uint8_t NROMSetup(void) {
     memcpy(prg_rom_lower, programData, 0x4000);
     memcpy(prg_rom_upper, programData + 0x4000, 0x4000);
   }
+  return 1;
 }

@@ -17,7 +17,6 @@
 typedef struct {
   SDL_Renderer *renderer;
   SDL_Window *window;
-  //SDL_Texture *texture[TILE_ROW*TILE_COL];
   SDL_Texture *scanlineTexture;
 } EmuDisplay; 
 
@@ -51,10 +50,50 @@ void cleanup(void) {
 
 
 /**
+ * Checks and handles any SDL event that occurs
+ * during runtime of the program.
+ */
+uint8_t handleEvent(void) {
+  SDL_Event event;
+
+  while (SDL_PollEvent(&event))
+  {
+    switch (event.type)
+    {
+      case SDL_QUIT:
+        return 0;
+
+      default:
+        return 1;
+    }
+  }
+  return 1;
+}
+
+/**
+ * Calls functions to initialize, render, and
+ * display the window for the emulator.
+ * Also checks for user events that occur
+ * such as closing the display window.
+ */
+void presentScene(void)
+{
+  SDL_RenderPresent(display.renderer);
+  if (!handleEvent()) return -1;
+  return 0;
+}
+
+
+/**
  * Called once upon the display startup to properly initialize
  * the display and set up key components of the NES graphics.
  */
 void displayInit(void) {
+  
+  for (int i = 0; i < 16; i++) {
+    imagePalette[i] = i;
+  }
+
   // Define flags for SDL_Window and SDL_Renderer.
   int rendererFlags, windowFlags;
   rendererFlags = SDL_RENDERER_ACCELERATED;
@@ -109,16 +148,21 @@ Uint32 color2int(struct color c) {
  * @param buffer: pointer to the scanline of pixel data.
  * @param scanline: current scanline (row) that is being displayed.
  */
-void renderScanline(uint8_t *buffer, uint8_t scanline) {
+uint8_t renderScanline(uint8_t *buffer, uint8_t scanline) {
 
   uint8_t paletteIdx = 0;
   uint8_t fetchCycle = 0;
   uint32_t * pixels;
-
-  SDL_LockTexture(display.scanlineTexture, NULL, (void **)&pixels, NULL); 
-  
+  int pitch;
+  SDL_Texture * text = SDL_CreateTexture(display.renderer,
+    SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 
+    256, 1);
+  if (text == NULL) {
+    SDL_Log("SDL_CreateTexture() failed: %s", SDL_GetError());
+    exit(1);
+  }
+  SDL_LockTexture(text, NULL, (void **)&pixels, &pitch); 
   Uint32 * scanlinePixels = (Uint32*) pixels;
-  
   for (int i = 0; i < 32; i++) {
     for (int cycleCount = 0; cycleCount < 8; cycleCount++) {
       if (scanline % 8 < 4) {
@@ -135,18 +179,17 @@ void renderScanline(uint8_t *buffer, uint8_t scanline) {
 
       paletteIdx |= ( *(buffer+3*i+1) & ( (1 << 7-cycleCount ) >> ( cycleCount-7 ) ) ) << 1;
       paletteIdx |=   *(buffer+3*i+2) & ( (1 << 7-cycleCount ) >> ( cycleCount-7 ) );
-
       Uint32 colorValue = color2int(palette[imagePalette[paletteIdx]]);
-
+      //Uint32 colorValue = color2int(palette[paletteIdx]);
       *(scanlinePixels + 8*i + cycleCount) = colorValue; 
     }
   }
 
-  SDL_UnlockTexture(display.scanlineTexture);
-
+  SDL_UnlockTexture(text);
+  display.scanlineTexture = text;
   SDL_Rect line = (SDL_Rect) { 0, scanline, 256, 1};
   SDL_RenderCopy(display.renderer, display.scanlineTexture, NULL, &line);
-
+  presentScene();
 }
 
 
@@ -365,47 +408,3 @@ void renderScanline(uint8_t *buffer, uint8_t scanline) {
  * SDL_Renderer instance that contains
  * all the pixel data for each tile.
  */
-void presentScene(void)
-{
-  SDL_RenderPresent(display.renderer);
-}
-
-
-/**
- * Checks and handles any SDL event that occurs
- * during runtime of the program.
- */
-uint8_t handleEvent(void) {
-  SDL_Event event;
-
-  while (SDL_PollEvent(&event))
-  {
-    switch (event.type)
-    {
-      case SDL_QUIT:
-        return 0;
-
-      default:
-        return 1;
-    }
-  }
-  return 1;
-}
-
-
-/**
- * Calls functions to initialize, render, and
- * display the window for the emulator.
- * Also checks for user events that occur
- * such as closing the display window.
- */
-uint8_t runDisplay(void)
-{
-	//prepareScene();
-	if (!handleEvent()) return 1;
-	presentScene();	
-	SDL_Delay(16);
-  return 0;
-}
-
-

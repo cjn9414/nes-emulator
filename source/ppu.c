@@ -210,9 +210,6 @@ void ppuStep(void) {
 
   // Handle state of the current scanline and cycle.
   switch (cycleCount) {
-    case 0:
-      scanCount++;
-      break;
     case 1:
       cycleType = VISIBLE;
       if (scanCount == 0) lineType = VISIBLE;
