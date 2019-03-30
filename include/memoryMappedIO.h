@@ -10,7 +10,7 @@ typedef struct {
   uint8_t PPUScroll;
   uint8_t PPUAddress;
   uint8_t PPUData;
-  unsigned short PPUWriteLatch;
+  unsigned short PPUWriteLatch; // Actually an 8-bit latch, for now will be ignored
 } MemoryMappedRegisters;
 
 MemoryMappedRegisters ppuRegisters;

@@ -22,4 +22,7 @@ void loadPPU(uint8_t *);
 
 uint8_t readPictureByte(uint16_t);
 
+uint8_t imagePalette[0x10];
+uint8_t spritePalette[0x10];
+
 #endif

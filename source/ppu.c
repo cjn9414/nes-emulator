@@ -212,9 +212,15 @@ void ppuStep(void) {
   switch (cycleCount) {
     case 1:
       cycleType = VISIBLE;
-      if (scanCount == 0) lineType = VISIBLE;
+      if (scanCount == 0) {
+        lineType = VISIBLE;
+        setVerticalBlankStart(0);
+      }
       else if (scanCount == 240) lineType = POST_RENDER;
-      else if (scanCount == 241) lineType = V_BLANK;
+      else if (scanCount == 241) {
+        lineType = V_BLANK;
+        setVerticalBlankStart(1);
+      }
       else if (scanCount == 261) lineType = PRE_RENDER;
       break;
     case 241://249:
@@ -234,7 +240,6 @@ void ppuStep(void) {
       break;
   }
 
-
   if (lineType == STANDARD_FETCH || PRE_FETCH) {
     if (cycleCount % 8 == 1) {
       NTByte = fetchNTByte((cycleCount + scanCount*32) / 8);
@@ -246,8 +251,9 @@ void ppuStep(void) {
       fetchHighBGTileByte(NTByte);
     }
   }
+  
 
-  if (cycleCount == 256) { scanCount++; }
+  if (cycleCount == 256) { scanCount = (lineType == PRE_RENDER ? 0 : scanCount+1); }
 
   // Increment the cycle and reset it if it equals 340.
   cycleCount = cycleCount == 340 ? 0 : cycleCount + 1;
@@ -316,4 +322,49 @@ uint8_t readPictureByte(uint16_t addr) {
   }
 }
 
+void writePictureByte() {
+  uint16_t addr = ppuRegisters.PPUWriteLatch;
+  uint8_t data = ppuRegisters.PPUData;
+  if (addr >= 0x4000) addr %= 0x4000; 
 
+  if (addr >= 0x3F20) addr = 0x3F00 + addr % 0x20;
+
+  if (addr >= 0x3000 && addr < 0x3F00) addr -= 0x1000;
+
+  if (addr < 0x1000) {
+    pTable0[addr] = data;
+  } 
+  else if (addr < 0x2000) {
+    pTable1[addr-0x1000] = data;
+  } 
+  else if (addr < 0x23C0) {
+    nTable0.tbl[addr-0x2000] = data;
+  }
+  else if (addr < 0x2400) {
+    nTable0.attr[addr-0x23C0] = data;
+  } 
+  else if (addr < 0x27C0) {
+    nTable1.tbl[addr-0x2400] = data;
+  } 
+  else if (addr < 0x2800) {
+    nTable1.attr[addr-0x27C0] = data;
+  } 
+  else if (addr < 0x2BC0) {
+    nTable2.tbl[addr-0x2800] = data;
+  } 
+  else if (addr < 0x2C00) {
+    nTable2.attr[addr-0x2BC0] = data;
+  } 
+  else if (addr < 0x2FC0) {
+    nTable3.tbl[addr-0x2C00] = data;
+  } 
+  else if (addr < 0x3000) {
+    nTable3.attr[addr-0x2FC0] = data;
+  } 
+  else if (addr < 0x3F10) {
+    imagePalette[addr-0x3F00] = data;
+  } 
+  else spritePalette[addr-0x3F10] = data;
+  ppuRegisters.PPUWriteLatch += 1;//(readPictureByte(0x2000) & 0x04 == 0 ? 1 : 32);
+
+}

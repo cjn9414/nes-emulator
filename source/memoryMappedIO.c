@@ -48,6 +48,9 @@ void setNMIGeneration(uint8_t set) {
   } else ppuRegisters.PPUControl &= ~(1 << 7);
 }
 
+uint8_t getNMIGeneration(void) {
+  return ppuRegisters.PPUControl & 0x80;
+}
 
 /**
   The following functions clear/set bits of the memory mapped
@@ -128,6 +131,8 @@ void setVerticalBlankStart(uint8_t set) {
   } else ppuRegisters.PPUStatus &= ~(1 << 7);
 }
 
+uint8_t getVerticalBlankStart() { return ppuRegisters.PPUStatus & 0x80; }
+
 
 /**
   The following functions clear/set bits of the memory mapped
@@ -167,6 +172,7 @@ void addressWrite(uint8_t data) {
   ppuRegisters.PPUAddress = data;
   ppuRegisters.PPUWriteLatch <<= 8;
   ppuRegisters.PPUWriteLatch |= data;
+  printf("ADDRESS WRITE: %X\n", ppuRegisters.PPUWriteLatch); 
 }
 
 /**
@@ -175,9 +181,10 @@ void addressWrite(uint8_t data) {
 */
 
 void dataWrite(uint8_t data) {
+  printf("%X %X\n", data, ppuRegisters.PPUWriteLatch);
   ppuRegisters.PPUData = data;
-  ppuRegisters.PPUWriteLatch <<= 8;
-  ppuRegisters.PPUWriteLatch |= data;
+  writePictureByte();
 }
+
 
 

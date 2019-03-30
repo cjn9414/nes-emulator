@@ -172,8 +172,7 @@ int main(int argc, char **argv) {
     ppuStep();
     ppuStep();
     ppuStep();
-    //uint8_t displayClosed = runDisplay();
-    //if (displayClosed) break;
+    if (!getDisplayStatus()) break;
   }
   // Free dynamically allocated memory.
   free(programData);

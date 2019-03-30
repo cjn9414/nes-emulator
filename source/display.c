@@ -80,7 +80,13 @@ void presentScene(void)
 {
   SDL_RenderPresent(display.renderer);
   if (!handleEvent()) return -1;
+  SDL_Delay(1);
   return 0;
+}
+
+
+void getDisplayStatus() {
+  return handleEvent();
 }
 
 
@@ -90,10 +96,6 @@ void presentScene(void)
  */
 void displayInit(void) {
   
-  for (int i = 0; i < 16; i++) {
-    imagePalette[i] = i;
-  }
-
   // Define flags for SDL_Window and SDL_Renderer.
   int rendererFlags, windowFlags;
   rendererFlags = SDL_RENDERER_ACCELERATED;

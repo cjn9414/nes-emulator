@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include "ppu.h"//delete this
 #include "cpu.h"
 #include "memory.h"
 #include "memoryMappedIO.h"
@@ -10,6 +11,8 @@
 
 #define KB 1024
 
+extern NameTable nTable0;
+
 extern struct registers regs;
 extern uint8_t prg_rom_lower[0x4000];
 extern uint8_t prg_rom_upper[0x4000];
@@ -17,6 +20,8 @@ extern uint8_t prg_rom_upper[0x4000];
 uint32_t cycle = 7;
 
 void nan(uint8_t, uint8_t);
+
+uint8_t interrupted = 0;
 
 /**
  * OPCODES WITH ADDITIONAL CYCLE FOR PAGE BOUNDARY CROSSING
@@ -120,6 +125,15 @@ uint8_t getFlagBreak(void) { return getBit(regs.p, 4); }
 uint8_t getFlagOverflow(void) { return getBit(regs.p, 6); }
 
 uint8_t getFlagNegative(void) { return getBit(regs.p, 7); }
+
+void NMInterruptHandler() {
+  pushStack(regs.pc & 0xFF);
+  regs.pc >>= 8;
+  pushStack(regs.pc);
+  pushStack(regs.p);
+  uint16_t addr = (readByte(0xFFFB) << 8) + readByte(0xFFFA);
+  regs.pc = addr;
+}
 
 /**
  * Helper function to set flags with all compare functions.
@@ -998,8 +1012,9 @@ void ror_abs_x(uint8_t lower, uint8_t upper) {
 
 void rti(uint8_t garb0, uint8_t garb1) {
   regs.p = (popStack() & 0xEF) | 0x20;
-  regs.pc = popStack();
-  regs.pc += (uint16_t) (popStack() << 8);
+  regs.pc = popStack() << 8;
+  regs.pc += popStack();
+  interrupted = 0;
 }
 
 void rts(uint8_t garb0, uint8_t garb1) {
@@ -1687,7 +1702,6 @@ FunctionExecute functions[0x100] = {
  * @param opcode: byte instruction that was last executed.
  */
 void updateCycle(uint16_t addr, uint8_t offset) {
-  printf("  %X %X  ", addr, offset);
   if (addr & 0x00FF < offset) {
     cycle++;
   }
@@ -1743,4 +1757,10 @@ void step(void) {
   regs.pc += (strcmp(opname, "JSR") != 0 &&
               strcmp(opname, "JMP") != 0 &&
               strcmp(opname, "RTI") != 0) ? len : 0;
+  if (getVerticalBlankStart()) {
+    if (getNMIGeneration() && !interrupted) {
+      interrupted = 1;
+      NMInterruptHandler();
+    }
+  }
 }
