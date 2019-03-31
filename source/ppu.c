@@ -130,6 +130,7 @@ const struct color palette[48] = {
  * @param idx: offset in bytes from the start of the name table.
  */
 uint8_t fetchNTByte(uint8_t idx) {
+  //printf("%X--%X", idx, nTable0.tbl[idx]); 
   return nTable0.tbl[idx];
 }
 
@@ -146,7 +147,7 @@ uint8_t fetchATByte(uint8_t idx) {
     pixelBuffer[idx*3] = nTable0.attr[idx];
   } 
   else {
-    pixelBuffer[(idx+2)*3] = nTable0.attr[(idx/4)%8 + idx/(32*4)];
+    pixelBuffer[(idx+2)*3] = nTable0.attr[(idx/4)%8 + 8*(idx/32)];
   }
 }
 
@@ -177,6 +178,10 @@ uint8_t fetchHighBGTileByte(uint8_t idx) {
  */
 void flushPixelBuffer(void) {
   renderScanline(pixelBuffer, scanCount);
+  //for (int i = 0; i < 3*FETCH_CYCLES_PER_SCANLINE; i++) {
+  //  printf("%X ", pixelBuffer[i]);
+  //}
+  //printf("\n\n\n");
 }
 
 /**
@@ -211,7 +216,7 @@ void ppuStep(void) {
   // Handle state of the current scanline and cycle.
   switch (cycleCount) {
     case 1:
-      cycleType = VISIBLE;
+      cycleType = STANDARD_FETCH;
       if (scanCount == 0) {
         lineType = VISIBLE;
         setVerticalBlankStart(0);
@@ -240,11 +245,11 @@ void ppuStep(void) {
       break;
   }
 
-  if (lineType == STANDARD_FETCH || PRE_FETCH) {
+  if (cycleType == STANDARD_FETCH || cycleType == PRE_FETCH) {
     if (cycleCount % 8 == 1) {
-      NTByte = fetchNTByte((cycleCount + scanCount*32) / 8);
+      NTByte = fetchNTByte((cycleCount + scanCount*256) / 8);
     } else if (cycleCount % 8 == 3) {
-      fetchATByte((cycleCount + scanCount*32) / 8);
+      fetchATByte((cycleCount + scanCount*256)/ 8);
     } else if (cycleCount % 8 == 5) {
       fetchLowBGTileByte(NTByte);
     } else if (cycleCount % 8 == 7) {
@@ -365,6 +370,19 @@ void writePictureByte() {
     imagePalette[addr-0x3F00] = data;
   } 
   else spritePalette[addr-0x3F10] = data;
-  ppuRegisters.PPUWriteLatch += 1;//(readPictureByte(0x2000) & 0x04 == 0 ? 1 : 32);
+  ppuRegisters.PPUWriteLatch += ((readPictureByte(0x2000) & 0x04) ? 1 : 32);
 
 }
+
+void devPrintPatternTable0() {
+  for (int i = 0; i < 0x1000; i++) {
+    printf("%X ", pTable0[i]);
+  }
+}
+
+void devPrintNameTable0() {
+  for (int i = 0; i < 0x40; i++) {
+    printf("%X ", nTable0.attr[i]);
+  }
+}
+

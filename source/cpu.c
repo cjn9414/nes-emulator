@@ -131,8 +131,18 @@ void NMInterruptHandler() {
   regs.pc >>= 8;
   pushStack(regs.pc);
   pushStack(regs.p);
-  uint16_t addr = (readByte(0xFFFB) << 8) + readByte(0xFFFA);
-  regs.pc = addr;
+  regs.pc = (readByte(0xFFFB) << 8) + readByte(0xFFFA);
+}
+
+void IRQHandler() {
+  printf("YUH");
+  pushStack(regs.pc & 0xFF);
+  regs.pc >>= 8;
+  pushStack(regs.pc);
+  pushStack(regs.p);
+  regs.pc = (readByte(0xFFFF) << 8) + readByte(0xFFFE);
+  interrupted = 0;
+  setFlagBreak(0);  // may not be kosher
 }
 
 /**
@@ -1763,4 +1773,14 @@ void step(void) {
       NMInterruptHandler();
     }
   }
+  if (getFlagBreak()) {
+    if (interrupted == 1) {
+      IRQHandler();
+    } else if (interrupted == 0) {
+      interrupted = 7;
+    } else interrupted--;
+  }
+  //if (cycle > 300000) {
+  //  exit(0);
+  //}
 }

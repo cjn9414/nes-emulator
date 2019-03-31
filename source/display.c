@@ -167,22 +167,22 @@ uint8_t renderScanline(uint8_t *buffer, uint8_t scanline) {
   Uint32 * scanlinePixels = (Uint32*) pixels;
   for (int i = 0; i < 32; i++) {
     for (int cycleCount = 0; cycleCount < 8; cycleCount++) {
-      if (scanline % 8 < 4) {
-        if (cycleCount % 2 == 0) {
-          paletteIdx = (*(buffer+3*i) & 0b11000000) >> 4;
+      if (scanline % 32 < 16) {
+        if ((i*8 + cycleCount) % 32 < 16) {
+          paletteIdx = (*(buffer+3*i) & 0b00000011) << 2;
         } else {
-          paletteIdx = (*(buffer+3*i) & 0b00110000) >> 2;
+          paletteIdx = (*(buffer+3*i) & 0b00001100);
         }
-      } else if (cycleCount % 2 == 0) {
-        paletteIdx = (*(buffer+3*i) & 0b00001100);
+      } else if ((i*8 + cycleCount) % 32 < 16) {
+        paletteIdx = (*(buffer+3*i) & 0b00110000) >> 2;
       } else {
-        paletteIdx = (*(buffer+3*i) & 0b00000011) << 2;
+        paletteIdx = (*(buffer+3*i) & 0b11000000) >> 4;
       }
 
-      paletteIdx |= ( *(buffer+3*i+1) & ( (1 << 7-cycleCount ) >> ( cycleCount-7 ) ) ) << 1;
-      paletteIdx |=   *(buffer+3*i+2) & ( (1 << 7-cycleCount ) >> ( cycleCount-7 ) );
+      paletteIdx |= ( *(buffer+3*i+1) & ( (1 << 7-cycleCount ) ) >> ( cycleCount-7 ) ) << 1;
+      paletteIdx |=   *(buffer+3*i+2) & ( (1 << 7-cycleCount ) ) >> ( cycleCount-7 );
       Uint32 colorValue = color2int(palette[imagePalette[paletteIdx]]);
-      //Uint32 colorValue = color2int(palette[paletteIdx]);
+      //printf("color: %X index: %X palette index: %X\n", colorValue, paletteIdx, imagePalette[paletteIdx]);
       *(scanlinePixels + 8*i + cycleCount) = colorValue; 
     }
   }
