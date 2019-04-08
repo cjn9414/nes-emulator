@@ -24,3 +24,20 @@ This component has not been started, or even researched yet. It is much more imp
 ### MMC - Memory Management Controllers
 These components are actually stored within a game cartridge, and allow for the switching of program & graphical data into & out of the memory of the NES, as needed. As of now, I have only implemented the NROM memory mapper, which is for simple games that actually don't contain and type of switching hardware in the cartridge. My feelings on this component are similar to that of the APU, except this component is more functional. Implementing NROM was required for me to test any games. After completion of the CPU and the PPU, I plan to implement at least the four most popular memory mappers, as that will cover the majority of games for the NES.
 
+## What From Here?
+This project has taught me a lot about computer architecture, emulation, and undoubtedly the Nintendo Entertainment System in its entirety. Between working on this project, discussing emulation with peers, and balancing a courseload that emphasizes principles in computing, I have been able to come up with many ideas for future projects that are at the least tangentially related to this one.
+
+### Design of the NES, fully realized onto hardware
+Implementing a complete design of the Nintendo Entertainment System using VHDL, and programming that onto an FPGA would be a great step forward after completion of this project. A project such as this could take much longer than my NES emulator I am currently developing. By designing the NES using a hardware description language, I must know the specifics of every component, and know exactly how to integrate that into a single architecture. One great benefit to this project is the ability to play physical NES games from the cartridge, using this design.
+
+### CPU Design onto an FPGA
+Similar to the previous project idea, but to a lesser complexity. This is a general idea that is not tied down to the implementation of a specific processor. I already have a headstart on this project, as I have designed a barebones version of the MIPS instruction set architecture using VHDL.
+
+### Less Code, More Accurate
+I know there are many, many things I can do right now to potentially improve the size, and accuracy of my current emulator. However, I am holding off on any of that until I make some more breakthroughs on the functionality of the emulator as a whole.
+
+### Reverse Engineering
+This project has piqued my interest in reverse engineering concepts over the course of reading various manuals and descriptions of the NES hardware. Trying to understand the purpose and operations performed by hardware without necessarily having access to information about the components is something I am interesting in researching.
+
+### Other Emulators
+I think after developing one emulator, doing another won't be quite as difficult. I now know what to expect from such a challenge, and although the architecture will be completely different, the tasks that need to be performed will be similar. I have interest in developing a SEGA Genesis emulator, as well as a device with 3D rendering, such as the Sony Playstation.
