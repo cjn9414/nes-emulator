@@ -141,7 +141,7 @@ uint8_t fetchNTByte(uint8_t idx) {
  * @param idx: offset in bytes from the start of the
  *             attribute table.
  */
-uint8_t fetchATByte(uint8_t idx) {
+void fetchATByte(uint8_t idx) {
   if (cycleType == PRE_FETCH) {
     idx -= FETCH_CYCLES_PER_SCANLINE-2;
     pixelBuffer[idx*3] = nTable0.attr[idx];
@@ -155,7 +155,7 @@ uint8_t fetchATByte(uint8_t idx) {
 /**
  * Fetches a low background tile byte on a given cycle of the PPU.
  */
-uint8_t fetchLowBGTileByte(uint8_t idx) {
+void fetchLowBGTileByte(uint8_t idx) {
   if (cycleType == PRE_FETCH) {
     idx -= FETCH_CYCLES_PER_SCANLINE-2;
     pixelBuffer[idx*3+1] = pTable0[idx];
@@ -168,7 +168,7 @@ uint8_t fetchLowBGTileByte(uint8_t idx) {
 /**
  * Fetches a high background tile byte on a given cycle of the PPU.
  */
-uint8_t fetchHighBGTileByte(uint8_t idx) {
+void fetchHighBGTileByte(uint8_t idx) {
   pixelBuffer[(idx+2)*3 + 2] = pTable0[idx + 8];
 }
 
@@ -178,10 +178,11 @@ uint8_t fetchHighBGTileByte(uint8_t idx) {
  */
 void flushPixelBuffer(void) {
   renderScanline(pixelBuffer, scanCount);
-  //for (int i = 0; i < 3*FETCH_CYCLES_PER_SCANLINE; i++) {
-  //  printf("%X ", pixelBuffer[i]);
+  memset(pixelBuffer, 0, sizeof(pixelBuffer));
+  //for (int i = 0; i < 0x10; i++) {
+  //  printf("%X ", imagePalette[i]);
   //}
-  //printf("\n\n\n");
+  //printf("\n");
 }
 
 /**
@@ -246,10 +247,11 @@ void ppuStep(void) {
   }
 
   if (cycleType == STANDARD_FETCH || cycleType == PRE_FETCH) {
+    uint8_t adjust = (cycleType == PRE_FETCH ? 30 : 0);
     if (cycleCount % 8 == 1) {
-      NTByte = fetchNTByte((cycleCount + scanCount*256) / 8);
+      NTByte = fetchNTByte(cycleCount/8 + scanCount*32 - adjust);
     } else if (cycleCount % 8 == 3) {
-      fetchATByte((cycleCount + scanCount*256)/ 8);
+      fetchATByte(cycleCount/8 + scanCount*32 - adjust);
     } else if (cycleCount % 8 == 5) {
       fetchLowBGTileByte(NTByte);
     } else if (cycleCount % 8 == 7) {
@@ -259,7 +261,6 @@ void ppuStep(void) {
   
 
   if (cycleCount == 256) { scanCount = (lineType == PRE_RENDER ? 0 : scanCount+1); }
-
   // Increment the cycle and reset it if it equals 340.
   cycleCount = cycleCount == 340 ? 0 : cycleCount + 1;
 }
@@ -375,8 +376,11 @@ void writePictureByte() {
 }
 
 void devPrintPatternTable0() {
+  uint8_t bits;
   for (int i = 0; i < 0x1000; i++) {
-    printf("%X ", pTable0[i]);
+    bits =  (pTable0[(i/8)*2 + 8] & 1 << (7-(i%8))) >> (7-(i%8)-1);
+    bits |= (pTable0[(i/8)*2    ] & 1 << (7-(i%8))) >> (7-(i%8)  ); 
+    printf("%X ", bits); 
   }
 }
 
