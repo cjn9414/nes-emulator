@@ -22,8 +22,8 @@ extern uint8_t * graphicData;
 
 uint8_t NROMSetup(void) {
   if (head.n_chr_banks == 1) {
-    memcpy(pTable0, graphicData + 0x0000, 0x1000);
-    memcpy(pTable1, graphicData + 0x0000, 0x1000);
+    memcpy(pTable0, graphicData + 0x1000, 0x1000);
+    memcpy(pTable1, graphicData + 0x1000, 0x1000);
   }
   if (head.n_prg_banks == 1) {
     memcpy(prg_rom_lower, programData, 0x4000);

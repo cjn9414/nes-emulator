@@ -61,7 +61,7 @@ uint8_t handleEvent(void) {
     switch (event.type)
     {
       case SDL_QUIT:
-        return 0;
+	return 0;
 
       default:
         return 1;
@@ -81,8 +81,10 @@ uint8_t handleEvent(void) {
 uint8_t presentScene(void)
 {
   SDL_RenderPresent(display.renderer);
-  if (!handleEvent()) return -1;
-  SDL_Delay(1);
+  if (!handleEvent()) {
+    return -1;
+  }
+  //SDL_Delay(1);
   return 0;
 }
 
@@ -141,7 +143,7 @@ void displayInit(void) {
  * @returns: Uint32 value that is a convert struct color instance.
  */
 Uint32 color2int(struct color c) {
-  Uint32 val = 0xFF000000 | c.rgb[0] << 16 | c.rgb[1] << 8 | c.rgb[2];
+  Uint32 val = 0xFF000000 | (c.rgb[0] << 16) | (c.rgb[1] << 8) | (c.rgb[2]);
   return val;
 }
 
@@ -153,7 +155,7 @@ Uint32 color2int(struct color c) {
  * @param scanline: current scanline (row) that is being displayed.
  */
 uint8_t renderScanline(uint8_t *buffer, uint8_t scanline) {
-  uint8_t tileIdx = 0, paletteIdx = 0;
+  uint8_t tileIdx = 0, fullPaletteIdx = 0, upperPaletteIdx = 0;
   uint8_t fetchCycle = 0;
   uint32_t * pixels;
   int pitch;
@@ -166,35 +168,34 @@ uint8_t renderScanline(uint8_t *buffer, uint8_t scanline) {
   }
   SDL_LockTexture(text, NULL, (void **)&pixels, &pitch); 
   Uint32 * scanlinePixels = (Uint32*) pixels;
-  //printf("\n");
   for (int tile = 0; tile < 32; tile++) {
-    tileIdx = *(buffer+3*tile);
-    //printf("%X ", *(buffer+3*tile+1));
+    tileIdx = *(buffer + tile); // gets the AT byte for each tile
+    uint8_t lowerByte = *(buffer + tile + 32);
+    uint8_t upperByte = *(buffer + tile + 64);
+    if (scanline % 32 < 16) {
+      if (tile % 4 < 2) {
+	upperPaletteIdx = (tileIdx & 0b00000011) << 2;
+      } else {
+        upperPaletteIdx = tileIdx & 0b00001100;
+      }
+    } else if (tile % 4 < 2) {
+      upperPaletteIdx = (tileIdx & 0b00110000) >> 2;
+    } else {
+      upperPaletteIdx = (tileIdx & 0b11000000) >> 4;
+    }
     for (int cycleCount = 0; cycleCount < 8; cycleCount++) {
-      if (scanline % 32 < 16) {
-          if ((tile*8 + cycleCount) % 32 < 16) {
-            paletteIdx = (tileIdx & 0b00000011) << 2;
-          } else {
-            paletteIdx = tileIdx & 0b00001100;
-          }
-        } else if ((tile*8 + cycleCount) % 32 < 16) {
-          paletteIdx = (tileIdx & 0b00110000) >> 2;
-        } else {
-          paletteIdx = (tileIdx & 0b11000000) >> 4;
-        }
-
-        paletteIdx |= ( *(buffer+3*tile+1) & ( (1 << (7-cycleCount) ) ) >> (7-cycleCount) ) << 1;
-        paletteIdx |=   *(buffer+3*tile+2) & ( (1 << (7-cycleCount) ) ) >> (7-cycleCount);
-        Uint32 colorValue = color2int(palette[imagePalette[paletteIdx]]);
-        //printf("color: %X index: %X palette index: %X\n", colorValue, paletteIdx, imagePalette[paletteIdx]);
-        scanlinePixels[8*tile + cycleCount] = colorValue; 
+	fullPaletteIdx = upperPaletteIdx | 
+		( ( ( lowerByte & ( (1 << (7-cycleCount) ) ) ) >> (7-cycleCount) ) << 1 ) | 
+		    ( upperByte & ( (1 << (7-cycleCount) ) ) ) >> (7-cycleCount);
+	Uint32 colorValue = color2int(palette[imagePalette[fullPaletteIdx]]);
+	scanlinePixels[8*tile + cycleCount] = colorValue; 
     }
   }
-
   SDL_UnlockTexture(text);
   display.scanlineTexture = text;
   SDL_Rect line = (SDL_Rect) { 0, scanline, 256, 1};
   SDL_RenderCopy(display.renderer, display.scanlineTexture, NULL, &line);
+  SDL_DestroyTexture(display.scanlineTexture);
   if (presentScene() == -1) exit(1);
 }
 

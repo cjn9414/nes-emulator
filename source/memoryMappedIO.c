@@ -24,6 +24,10 @@ void setSpritePatternAddress(uint8_t set) {
   } else ppuRegisters.PPUControl &= ~(1 << 3);
 }
 
+uint8_t getSpritePatternAddress() {
+  return ppuRegisters.PPUControl & (1 << 3);	
+}
+
 void setBackgroundPatternAddress(uint8_t set) {
   if (set) {
     ppuRegisters.PPUControl |= (1 << 4);
@@ -172,7 +176,7 @@ void addressWrite(uint8_t data) {
   ppuRegisters.PPUAddress = data;
   ppuRegisters.PPUWriteLatch <<= 8;
   ppuRegisters.PPUWriteLatch |= data;
-  printf("ADDRESS WRITE: %X\n", ppuRegisters.PPUWriteLatch); 
+  //printf("ADDRESS WRITE: %X\n", ppuRegisters.PPUWriteLatch); 
 }
 
 /**
@@ -181,7 +185,7 @@ void addressWrite(uint8_t data) {
 */
 
 void dataWrite(uint8_t data) {
-  printf("%X %X\n", data, ppuRegisters.PPUWriteLatch);
+  //printf("%X %X\n", data, ppuRegisters.PPUWriteLatch);
   ppuRegisters.PPUData = data;
   writePictureByte();
 }

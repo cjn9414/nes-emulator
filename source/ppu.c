@@ -42,10 +42,10 @@ enum FrameStatus lineType;
 enum ScanlineStatus cycleType;
 
 // Stores the current count for the scanline and each cycle within.
-unsigned int scanCount, cycleCount; 
+uint16_t scanCount = 0, cycleCount = 0; 
 
 // Stores the more recent nametable byte that was fetched.
-uint8_t NTByte;
+uint16_t NTByte;
 
 // Declares the image and sprite palettes in PPU memory.
 uint8_t imagePalette[0x10];
@@ -129,8 +129,7 @@ const struct color palette[48] = {
  * 
  * @param idx: offset in bytes from the start of the name table.
  */
-uint8_t fetchNTByte(uint8_t idx) {
-  //printf("%X--%X", idx, nTable0.tbl[idx]); 
+uint8_t fetchNTByte(uint16_t idx) {
   return nTable0.tbl[idx];
 }
 
@@ -141,35 +140,36 @@ uint8_t fetchNTByte(uint8_t idx) {
  * @param idx: offset in bytes from the start of the
  *             attribute table.
  */
-void fetchATByte(uint8_t idx) {
-  if (cycleType == PRE_FETCH) {
+void fetchATByte(uint16_t idx) {
+  if (lineType == PRE_RENDER) {
     idx -= FETCH_CYCLES_PER_SCANLINE-2;
-    pixelBuffer[idx*3] = nTable0.attr[idx];
-  } 
-  else {
-    pixelBuffer[(idx+2)*3] = nTable0.attr[(idx/4)%8 + 8*(idx/32)];
+  } else if (cycleType == PRE_FETCH) {
+    idx += ( (scanCount + 1) % 32 == 0 ? 8 : 0);
   }
+  //printf("%x ", nTable0.attr[(idx/4)%8 + 8*(idx/32)]);
+
+  pixelBuffer[idx] = nTable0.attr[(idx/4)%8 + 8*(idx/32)];
 }
 
 
 /**
  * Fetches a low background tile byte on a given cycle of the PPU.
  */
-void fetchLowBGTileByte(uint8_t idx) {
-  if (cycleType == PRE_FETCH) {
-    idx -= FETCH_CYCLES_PER_SCANLINE-2;
-    pixelBuffer[idx*3+1] = pTable0[idx];
-  } 
-  else {
-    pixelBuffer[(idx+2)*3 + 1] = pTable0[idx];
-  }
+void fetchLowBGTileByte(uint16_t idx) {
+  pixelBuffer[(cycleType == PRE_FETCH ? (cycleCount-320) / 8 : cycleCount / 8)
+	  + FETCH_CYCLES_PER_SCANLINE] = 
+	  pTable0[(16 * (idx % 32)) + (512 * (idx / 32)) + (scanCount % 8) +
+	 	 (getSpritePatternAddress() ? 0x1000 : 0x0)];
 }
 
 /**
  * Fetches a high background tile byte on a given cycle of the PPU.
  */
-void fetchHighBGTileByte(uint8_t idx) {
-  pixelBuffer[(idx+2)*3 + 2] = pTable0[idx + 8];
+void fetchHighBGTileByte(uint16_t idx) {
+  pixelBuffer[(cycleType == PRE_FETCH ? (cycleCount-320) / 8 : cycleCount / 8)
+	  + 2*FETCH_CYCLES_PER_SCANLINE] = 
+	  pTable0[(16 * (idx % 32)) + (512 * (idx / 32)) + (scanCount % 8) + 8 + 
+	  	(getSpritePatternAddress() ? 0x1000 : 0x0)];
 }
 
 /**
@@ -179,10 +179,6 @@ void fetchHighBGTileByte(uint8_t idx) {
 void flushPixelBuffer(void) {
   renderScanline(pixelBuffer, scanCount);
   memset(pixelBuffer, 0, sizeof(pixelBuffer));
-  //for (int i = 0; i < 0x10; i++) {
-  //  printf("%X ", imagePalette[i]);
-  //}
-  //printf("\n");
 }
 
 /**
@@ -213,7 +209,6 @@ void setMirroring(enum MirroringType newMirror) {
  * Uses NTSC timing.
  */
 void ppuStep(void) {
-
   // Handle state of the current scanline and cycle.
   switch (cycleCount) {
     case 1:
@@ -246,19 +241,24 @@ void ppuStep(void) {
       break;
   }
 
-  if (cycleType == STANDARD_FETCH || cycleType == PRE_FETCH) {
-    uint8_t adjust = (cycleType == PRE_FETCH ? 30 : 0);
+  if ((cycleType == STANDARD_FETCH || cycleType == PRE_FETCH) && lineType == VISIBLE) {
     if (cycleCount % 8 == 1) {
-      NTByte = fetchNTByte(cycleCount/8 + scanCount*32 - adjust);
-    } else if (cycleCount % 8 == 3) {
-      fetchATByte(cycleCount/8 + scanCount*32 - adjust);
-    } else if (cycleCount % 8 == 5) {
+      NTByte = fetchNTByte( ( cycleType == STANDARD_FETCH ? 2 + (cycleCount / 8 ) % 32 : 
+	( (cycleCount - 320) / 8) % 32 ) + 32 * ( ( scanCount ) / 8 ) );
+    } 
+    else if (cycleCount % 8 == 3) {
+      fetchATByte( ( cycleCount / 32 ) + ( 8 * (scanCount / 32) ) );
+    }
+    else if (cycleCount % 8 == 5) {
       fetchLowBGTileByte(NTByte);
     } else if (cycleCount % 8 == 7) {
       fetchHighBGTileByte(NTByte);
     }
+  } else if (lineType == POST_RENDER && cycleType == PRE_RENDER) {
+    if (cycleCount % 8 == 1) {
+      NTByte = fetchNTByte( (cycleCount - 320) / 8 );
+    }
   }
-  
 
   if (cycleCount == 256) { scanCount = (lineType == PRE_RENDER ? 0 : scanCount+1); }
   // Increment the cycle and reset it if it equals 340.
@@ -372,7 +372,6 @@ void writePictureByte() {
   } 
   else spritePalette[addr-0x3F10] = data;
   ppuRegisters.PPUWriteLatch += ((readPictureByte(0x2000) & 0x04) ? 1 : 32);
-
 }
 
 void devPrintPatternTable0() {
@@ -385,8 +384,8 @@ void devPrintPatternTable0() {
 }
 
 void devPrintNameTable0() {
-  for (int i = 0; i < 0x40; i++) {
-    printf("%X ", nTable0.attr[i]);
+  for (int i = 0; i < 0x1000; i++) {
+    printf("%X ", nTable0.tbl[i]);
   }
 }
 
