@@ -130,7 +130,21 @@ const struct color palette[48] = {
  * @param idx: offset in bytes from the start of the name table.
  */
 uint8_t fetchNTByte(uint16_t idx) {
-  return nTable0.tbl[idx];
+  uint8_t table = ppuRegisters.PPUControl & 0x03;
+  switch (table) {
+    case 0x00:
+      return nTable0.tbl[idx];
+      break;
+    case 0x01:
+      return nTable1.tbl[idx];
+      break;
+    case 0x02:
+      return nTable2.tbl[idx];
+      break;
+    default:
+      return nTable3.tbl[idx];
+      break;
+  }
 }
 
 
@@ -371,7 +385,7 @@ void writePictureByte() {
     imagePalette[addr-0x3F00] = data;
   } 
   else spritePalette[addr-0x3F10] = data;
-  ppuRegisters.PPUWriteLatch += ((readPictureByte(0x2000) & 0x04) ? 1 : 32);
+  //ppuRegisters.PPUWriteLatch += ((readPictureByte(0x2000) & 0x04) ? 32 : 1);
 }
 
 void devPrintPatternTable0() {
@@ -384,8 +398,8 @@ void devPrintPatternTable0() {
 }
 
 void devPrintNameTable0() {
-  for (int i = 0; i < 0x1000; i++) {
-    printf("%X ", nTable0.tbl[i]);
+  for (int i = 0; i < 0x3C0; i++) {
+    printf("%X: %X\n", 0x2000 + i, nTable0.tbl[i]);
   }
 }
 

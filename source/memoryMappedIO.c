@@ -185,8 +185,7 @@ void addressWrite(uint8_t data) {
 */
 
 void dataWrite(uint8_t data) {
-  //printf("%X %X\n", data, ppuRegisters.PPUWriteLatch);
-  ppuRegisters.PPUData = data;
+ ppuRegisters.PPUData = data;
   writePictureByte();
 }
 

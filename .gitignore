@@ -1,8 +1,9 @@
-*.nes
 *.o
 SDL2-2.0.9
 source/obj
 source/*.log
+source/ROMS/*
 branch_timing_tests/
 display
 cpu_exec_space
+source/valgrind-3.14.0/*

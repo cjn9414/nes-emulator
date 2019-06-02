@@ -61,6 +61,7 @@ uint8_t handleEvent(void) {
     switch (event.type)
     {
       case SDL_QUIT:
+	devPrintNameTable0();
 	return 0;
 
       default:

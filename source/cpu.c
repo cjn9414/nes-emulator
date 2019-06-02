@@ -1780,7 +1780,4 @@ void step(void) {
       interrupted = 7;
     } else interrupted--;
   }
-  //if (cycle > 300000) {
-  //  exit(0);
-  //}
 }

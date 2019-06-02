@@ -163,7 +163,8 @@ int main(int argc, char **argv) {
   // Load the on-power status of the memory mapper and the cpu registers.
   
   mapperSetup();
-  registerPowerup(&regs);
+  cpuRegisterPowerup(&regs);
+  ppuRegisterPowerup();
   // Initialize the picture display.
   displayInit();
   // Run the emulator display and perform CPU step.
