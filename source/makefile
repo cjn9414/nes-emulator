@@ -14,12 +14,16 @@ DEPS := $(patsubst %,$(IDIR)/%,$(_DEPS))
 _OBJ := main.o cpu.o registers.o memory.o ppu.o MMC1.o MMC2.o MMC3.o NROM.o display.o memoryMappedIO.o
 OBJ := $(patsubst %,$(ODIR)/%,$(_OBJ))
 
+all: $(ODIR) display
 
 $(ODIR)/%.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 display: $(OBJ)
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+$(ODIR):
+	mkdir -p $(ODIR)
 
 .PHONY: clean
 
