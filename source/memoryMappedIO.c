@@ -1,165 +1,260 @@
+/**
+ * This function simply makes it easier to get and set all flags within
+ * the PPU registers located in CPU memory at $2000-$2007.
+ *
+ * $2000 - PPUCTRL
+ * $2001 - PPUMASK
+ * $2002 - PPUSTATUS
+ * $2003 - OAMADDR
+ * $2004 - OAMDATA
+ * $2005 - PPUSCROLL
+ * $2006 - PPUADDR
+ * $2007 - PPUDATA
+ */
+
 #include <stdint.h>
 
 #include "memoryMappedIO.h"
 
 /**
-  The following functions clear/set bits of the memory mapped
-  register at $2000 (Controller register)
-*/
+ * The following functions clear/set bits of the memory mapped
+ * register at $2000 (Controller register)
+ */
+
 void setBaseNameTableAddr(uint8_t bits) {
-  uint8_t mask = 0b11111100;
-  ppuRegisters.PPUControl &= mask;
+  ppuRegisters.PPUControl &= ~PPUCTRL_NAME_TBL_MASK;
   ppuRegisters.PPUControl |= bits;
 }
 
 void setVRAMIncrement(uint8_t set) {
   if (set) {
-    ppuRegisters.PPUControl |= (1 << 2);  
-  } else ppuRegisters.PPUControl &= ~(1 << 2);
+    ppuRegisters.PPUControl |= PPUCTRL_VRAM_INC_MASK;  
+  } else ppuRegisters.PPUControl &= ~PPUCTRL_VRAM_INC_MASK;
 }
 
 void setSpritePatternAddress(uint8_t set) {
   if (set) {
-    ppuRegisters.PPUControl |= (1 << 3);
-  } else ppuRegisters.PPUControl &= ~(1 << 3);
-}
-
-uint8_t getSpritePatternAddress() {
-  return ppuRegisters.PPUControl & (1 << 3);	
+    ppuRegisters.PPUControl |= PPUCTRL_SPRITE_ADDR_MASK;
+  } else ppuRegisters.PPUControl &= ~PPUCTRL_SPRITE_ADDR_MASK;
 }
 
 void setBackgroundPatternAddress(uint8_t set) {
   if (set) {
-    ppuRegisters.PPUControl |= (1 << 4);
-  } else ppuRegisters.PPUControl &= ~(1 << 4);
+    ppuRegisters.PPUControl |= PPUCTRL_BACKGROUND_ADDR_MASK;
+  } else ppuRegisters.PPUControl &= ~PPUCTRL_BACKGROUND_ADDR_MASK;
 }
 
 void setSpriteSize(uint8_t set) {
   if (set) {
-    ppuRegisters.PPUControl |= (1 << 5);
-  } else ppuRegisters.PPUControl &= ~(1 << 5);
+    ppuRegisters.PPUControl |= PPUCTRL_SPRITE_SIZE_MASK;
+  } else ppuRegisters.PPUControl &= ~PPUCTRL_SPRITE_SIZE_MASK;
 }
 
 void setPPUMasterSlave(uint8_t set) {
   if (set) {
-    ppuRegisters.PPUControl |= (1 << 6);
-  } else ppuRegisters.PPUControl &= ~(1 << 6);
+    ppuRegisters.PPUControl |= PPUCTRL_PPU_MASTER_SLAVE_MASK;
+  } else ppuRegisters.PPUControl &= ~PPUCTRL_PPU_MASTER_SLAVE_MASK;
 }
 
 void setNMIGeneration(uint8_t set) {
   if (set) {
-    ppuRegisters.PPUControl |= (1 << 7);
-  } else ppuRegisters.PPUControl &= ~(1 << 7);
+    ppuRegisters.PPUControl |= PPUCTRL_NMI_GEN_MASK;
+  } else ppuRegisters.PPUControl &= ~PPUCTRL_NMI_GEN_MASK;
+}
+
+
+
+/**
+ * The following functions gets flags of the memory mapped register
+ * at $2000 (Controller register)
+ */
+
+uint8_t getBaseNameTableAddress(void) {
+  return ppuRegisters.PPUControl & PPUCTRL_NAME_TBL_MASK;
+}
+
+uint8_t getVRAMIncrement(void) {
+  return ppuRegisters.PPUControl & PPUCTRL_VRAM_INC_MASK;
+}
+
+uint8_t getSpritePatternAddress(void) {
+  return ppuRegisters.PPUControl & PPUCTRL_SPRITE_ADDR_MASK;	
+}
+
+uint8_t getBackgroundPatternAddress(void) {
+  return ppuRegisters.PPUControl & PPUCTRL_BACKGROUND_ADDR_MASK;
+}
+
+uint8_t getSpriteSize(void) {
+  return ppuRegisters.PPUControl & PPUCTRL_SPRITE_SIZE_MASK;
+}
+
+uint8_t getPPUMasterSlave(void) {
+  return ppuRegisters.PPUControl & PPUCTRL_PPU_MASTER_SLAVE_MASK;
 }
 
 uint8_t getNMIGeneration(void) {
-  return ppuRegisters.PPUControl & 0x80;
+  return ppuRegisters.PPUControl & PPUCTRL_NMI_GEN_MASK;
 }
 
+
 /**
-  The following functions clear/set bits of the memory mapped
-  register at $2001 (Mask register)
-*/
+ * The following functions clear/set bits of the memory mapped
+ * register at $2001 (Mask register)
+ */
 
 void setGrayScale(uint8_t set) {
   if (set) {
-    ppuRegisters.PPUMask |= 1;
-  } else ppuRegisters.PPUMask &= 0b11111110;
+    ppuRegisters.PPUMask |= PPUMASK_GREYSCALE_MASK;
+  } else ppuRegisters.PPUMask &= ~PPUMASK_GREYSCALE_MASK;
 }
 
 void setBackgroundLeftEightPixelsActive(uint8_t set) {
   if (set) {
-    ppuRegisters.PPUMask |= (1 << 1);
-  } else ppuRegisters.PPUMask &= ~(1 << 1);
+    ppuRegisters.PPUMask |= PPUMASK_SHOW_BACKGROUND_LEFT_MASK;
+  } else ppuRegisters.PPUMask &= ~PPUMASK_SHOW_BACKGROUND_LEFT_MASK;
 }
 
 void setSpriteLeftEightPixelsActive(uint8_t set) {
   if (set) {
-    ppuRegisters.PPUMask |= (1 << 2);
-  } else ppuRegisters.PPUMask &= ~(1 << 2);
+    ppuRegisters.PPUMask |= PPUMASK_SHOW_SPRITES_LEFT_MASK;
+  } else ppuRegisters.PPUMask &= ~PPUMASK_SHOW_SPRITES_LEFT_MASK;
 }
 
 void setBackground(uint8_t set) {
   if (set) {
-    ppuRegisters.PPUMask |= (1 << 3);
-  } else ppuRegisters.PPUMask &= ~(1 << 3);
+    ppuRegisters.PPUMask |= PPUMASK_SHOW_BACKGROUND_MASK;
+  } else ppuRegisters.PPUMask &= ~PPUMASK_SHOW_BACKGROUND_MASK;
 }
 
 void setSprites(uint8_t set) {
   if (set) {
-    ppuRegisters.PPUMask |= (1 << 4);
-  } else ppuRegisters.PPUMask &= ~(1 << 4);
+    ppuRegisters.PPUMask |= PPUMASK_SHOW_SPRITES_MASK;
+  } else ppuRegisters.PPUMask &= ~PPUMASK_SHOW_SPRITES_MASK;
 }
 
 void setEmphasizeRed(uint8_t set) {
   if (set) {
-    ppuRegisters.PPUMask |= (1 << 5);
-  } else ppuRegisters.PPUMask &= ~(1 << 5);
+    ppuRegisters.PPUMask |= PPUMASK_EMPHASIZE_RED_MASK;
+  } else ppuRegisters.PPUMask &= ~PPUMASK_EMPHASIZE_RED_MASK;
 }
 
 void setEmphasizeGreen(uint8_t set) {
   if (set) {
-    ppuRegisters.PPUMask |= (1 << 6);
-  } else ppuRegisters.PPUMask &= ~(1 << 6);
+    ppuRegisters.PPUMask |= PPUMASK_EMPHASIZE_GREEN_MASK;
+  } else ppuRegisters.PPUMask &= ~PPUMASK_EMPHASIZE_GREEN_MASK;
 }
 
 void setEmphasizeBlue(uint8_t set) {
   if (set) {
-    ppuRegisters.PPUMask |= (1 << 7);
-  } else ppuRegisters.PPUMask &= ~(1 << 7);
+    ppuRegisters.PPUMask |= PPUMASK_EMPHASIZE_BLUE_MASK;
+  } else ppuRegisters.PPUMask &= ~PPUMASK_EMPHASIZE_BLUE_MASK;
+}
+
+
+
+/**
+ * The following functions get the flags of the memory mapped
+ * register at $2001 (Mask register)
+ */
+
+uint8_t getGrayScale(void) {
+  return ppuRegisters.PPUMask & PPUMASK_GREYSCALE_MASK;
+}
+
+uint8_t getBackgroundLeftEightPixelsActive(void) {
+  return ppuRegisters.PPUMask & PPUMASK_SHOW_BACKGROUND_LEFT_MASK;
+}
+
+uint8_t getSpriteLeftEightPixelsActive(void) {
+  return ppuRegisters.PPUMask & PPUMASK_SHOW_SPRITES_LEFT_MASK;
+}
+
+uint8_t getBackground(void) {
+  return ppuRegisters.PPUMask & PPUMASK_SHOW_BACKGROUND_MASK;
+}
+
+uint8_t getSprites(void) {
+  return ppuRegisters.PPUMask & PPUMASK_SHOW_SPRITES_MASK;
+}
+
+uint8_t getEmphasizeRed(void) {
+  return ppuRegisters.PPUMask & PPUMASK_EMPHASIZE_RED_MASK;
+}
+
+uint8_t getEmphasizeGreen(void) {
+  return ppuRegisters.PPUMask & PPUMASK_EMPHASIZE_GREEN_MASK;
+}
+
+uint8_t getEmphasizeBlue(void) {
+  return ppuRegisters.PPUMask & PPUMASK_EMPHASIZE_BLUE_MASK;
 }
 
 
 /**
-  The following functions clear/set bits of the memory mapped
-  register at $2002 (Status register)
-*/
-
-//TODO: make function to set lower five bits of status register
+ * The following functions clear/set bits of the memory mapped
+ * register at $2002 (Status register)
+ */
 
 void setSpriteOverflow(uint8_t set) {
   if (set) {
-    ppuRegisters.PPUStatus |= (1 << 5);
-  } else ppuRegisters.PPUStatus &= ~(1 << 5);
+    ppuRegisters.PPUStatus |= PPUSTATUS_SPRITE_OVERFLOW_MASK;
+  } else ppuRegisters.PPUStatus &= ~PPUSTATUS_SPRITE_OVERFLOW_MASK;
 }
 
 void setSpriteZeroHits(uint8_t set) {
   if (set) {
-    ppuRegisters.PPUStatus |= (1 << 6);
-  } else ppuRegisters.PPUStatus &= ~(1 << 6);
+    ppuRegisters.PPUStatus |= PPUSTATUS_SPRITE_ZERO_HIT_MASK;
+  } else ppuRegisters.PPUStatus &= ~PPUSTATUS_SPRITE_ZERO_HIT_MASK;
 }
 
 void setVerticalBlankStart(uint8_t set) {
   if (set) {
-    ppuRegisters.PPUStatus |= (1 << 7);
-  } else ppuRegisters.PPUStatus &= ~(1 << 7);
+    ppuRegisters.PPUStatus |= PPUSTATUS_VBLANK_STARTED_MASK;
+  } else ppuRegisters.PPUStatus &= ~PPUSTATUS_VBLANK_STARTED_MASK;
 }
-
-uint8_t getVerticalBlankStart() { return ppuRegisters.PPUStatus & 0x80; }
 
 
 /**
-  The following functions clear/set bits of the memory mapped
-  register at $2003 (OAM address register)
-*/
+ * The following functions get the flags of the memory mapped register
+ * at $2002 (Status register)
+ */
+
+uint8_t getSpriteOverflow(void) {
+  return ppuRegisters.PPUStatus & PPUSTATUS_SPRITE_OVERFLOW_MASK;
+}
+
+uint8_t getSpriteZeroHits(void) {
+  return ppuRegisters.PPUStatus & PPUSTATUS_SPRITE_ZERO_HIT_MASK;
+}
+
+uint8_t getVerticalBlankStart() { 
+  return ppuRegisters.PPUStatus & PPUSTATUS_VBLANK_STARTED_MASK;
+}
+
+
+/**
+ * The following function writes to the memory mapped
+ * register at $2003 (OAM address register)
+ */
 
 void OAMAddressWrite(uint8_t addr) {
   ppuRegisters.OAMAddress = addr;
 }
 
 /**
-  The following functions clear/set bits of the memory mapped
-  register at $2004 (OAM data register)
-*/
+ * The following function writes to the memory mapped
+ * register at $2004 (OAM data register)
+ */
 
 void OAMDataWrite(uint8_t data) {
   ppuRegisters.OAMData = data;
 }
 
 /**
-  The following functions clear/set bits of the memory mapped
-  register at $2005 (Scroll register)
-*/
+ * The following function writes to the memory mapped
+ * register at $2005 (Scroll register)
+ */
 
 void scrollWrite(uint8_t data) {
   ppuRegisters.PPUScroll = data;
@@ -168,24 +263,23 @@ void scrollWrite(uint8_t data) {
 }
 
 /**
-  The following functions clear/set bits of the memory mapped
-  register at $2006 (Address register)
-*/
+ * The following function writes to the memory mapped
+ * register at $2006 (Address register)
+ */
 
 void addressWrite(uint8_t data) {
   ppuRegisters.PPUAddress = data;
   ppuRegisters.PPUWriteLatch <<= 8;
   ppuRegisters.PPUWriteLatch |= data;
-  //printf("ADDRESS WRITE: %X\n", ppuRegisters.PPUWriteLatch); 
 }
 
 /**
-  The following functions clear/set bits of the memory mapped
-  register at $2007 (Data register)
-*/
+ * The following function writes to the memory mapped
+ * register at $2007 (Data register)
+ */
 
 void dataWrite(uint8_t data) {
- ppuRegisters.PPUData = data;
+  ppuRegisters.PPUData = data;
   writePictureByte();
 }
 
