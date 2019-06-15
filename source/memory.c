@@ -46,7 +46,7 @@ uint8_t readByte(uint16_t addr) {
       case 0x2007:
         {
         uint8_t val = ppuRegisters.PPUData;
-	ppuRegisters.PPUWriteLatch += getBit(ppuRegisters.PPUControl, 2) ? 32 : 1;
+	ppuRegisters.PPUWriteLatch += getVRAMIncrement() ? 32 : 1;
         return val;
         }
       default:
@@ -117,10 +117,10 @@ void writeByte (uint16_t addr, uint8_t val) {
         ppuRegisters.PPUMask = val;
         break;
       case 0x2003:
-        ppuRegisters.OAMAddress = val;
+        OAMAddressWrite(val);
         break;
       case 0x2004:
-        ppuRegisters.OAMData = val;
+        OAMDataWrite(val);
         break;
       case 0x2005:
         scrollWrite(val);
@@ -130,7 +130,6 @@ void writeByte (uint16_t addr, uint8_t val) {
         break;
       case 0x2007:
         dataWrite(val);
-	ppuRegisters.PPUWriteLatch += ((ppuRegisters.PPUControl & 0x04) ? 32 : 1);	
         break;
       default:
         printf("Error: Unexpected address to memory mapper I/O registers.\n");

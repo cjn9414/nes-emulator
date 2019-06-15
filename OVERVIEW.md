@@ -166,7 +166,7 @@
     * An even index number indicates the sprite data is located in the first pattern table at $0000
     * An odd index number indicates the sprite data is located in the second pattern table at $1000
   * Sprites can be read or written one at a time by first writing the address to $2003 and then reading or writing $2004
-    * As an alternative, the entirety of SPR-RAM can be written in one DMA operation by writing to $4014'
+    * As an alternative, the entirety of SPR-RAM can be written in one DMA operation by writing to $4014
   * Sprites given priority by their position in SPR-RAM
     * The first sprite, sprite 0 has a higher priority
     * On each line, the system draws sprites from lower to higher priority

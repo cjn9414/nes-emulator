@@ -283,7 +283,6 @@ void addressWrite(uint8_t data) {
 void dataWrite(uint8_t data) {
   ppuRegisters.PPUData = data;
   writePictureByte();
+  ppuRegisters.PPUWriteLatch += (getVRAMIncrement() ? 32 : 1);
 }
-
-
 
