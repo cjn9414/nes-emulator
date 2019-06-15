@@ -35,6 +35,9 @@ extern uint8_t spritePalette[0x10];
 extern const struct color palette[48];
 extern struct Header head;
 
+// pixels from end of each scanline to be
+// placed at the beginning of the next scanline
+uint32_t preRenderPixels[0x10];
 
 /**
  * Performs SDL and memory management
@@ -169,6 +172,7 @@ uint8_t renderScanline(uint8_t *buffer, uint8_t scanline) {
   }
   SDL_LockTexture(text, NULL, (void **)&pixels, &pitch); 
   Uint32 * scanlinePixels = (Uint32*) pixels;
+  memcpy(scanlinePixels, preRenderPixels, (size_t) 16*sizeof(Uint32));
   for (int tile = 0; tile < 32; tile++) {
     tileIdx = *(buffer + tile); // gets the AT byte for each tile
     uint8_t lowerByte = *(buffer + tile + 32);
@@ -189,7 +193,11 @@ uint8_t renderScanline(uint8_t *buffer, uint8_t scanline) {
 		( ( ( lowerByte & ( (1 << (7-cycleCount) ) ) ) >> (7-cycleCount) ) << 1 ) | 
 		    ( upperByte & ( (1 << (7-cycleCount) ) ) ) >> (7-cycleCount);
 	Uint32 colorValue = color2int(palette[imagePalette[fullPaletteIdx]]);
-	scanlinePixels[8*tile + cycleCount] = colorValue; 
+	if (tile < 30) {
+	  scanlinePixels[8*tile + cycleCount + 16] = colorValue;
+	} else {
+	  preRenderPixels[8*(tile-30) + cycleCount] = colorValue;
+	}
     }
   }
   SDL_UnlockTexture(text);
