@@ -10,10 +10,6 @@ extern uint8_t prg_rom_upper[0x4000];
 
 extern uint8_t pTable0[0x1000];
 extern uint8_t pTable1[0x1000];
-extern NameTable nTable0;
-extern NameTable nTable1;
-extern NameTable nTable2;
-extern NameTable nTable3;
 
 // Redeclare external variable.
 extern struct Header head;

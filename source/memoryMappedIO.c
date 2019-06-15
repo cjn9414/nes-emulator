@@ -249,6 +249,8 @@ void OAMAddressWrite(uint8_t addr) {
 
 void OAMDataWrite(uint8_t data) {
   ppuRegisters.OAMData = data;
+  ppuRegisters.OAMAddress++;
+
 }
 
 /**

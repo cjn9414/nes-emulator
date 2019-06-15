@@ -192,6 +192,7 @@ uint8_t renderScanline(uint8_t *buffer, uint8_t scanline) {
 	fullPaletteIdx = upperPaletteIdx | 
 		( ( ( lowerByte & ( (1 << (7-cycleCount) ) ) ) >> (7-cycleCount) ) << 1 ) | 
 		    ( upperByte & ( (1 << (7-cycleCount) ) ) ) >> (7-cycleCount);
+	//Uint32 colorValue = color2int(palette[imagePalette[(8*tile + cycleCount)%64]]);
 	Uint32 colorValue = color2int(palette[imagePalette[fullPaletteIdx]]);
 	if (tile < 30) {
 	  scanlinePixels[8*tile + cycleCount + 16] = colorValue;

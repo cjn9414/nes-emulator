@@ -29,6 +29,18 @@
 uint8_t pTable0[0x1000];
 uint8_t pTable1[0x1000];
 
+// Declares object attribute memory containing data for 64 sprites
+//Sprite OAM[64];
+uint8_t primaryOAM[256];
+uint8_t secondaryOAM[32];
+
+uint8_t activeSprite[4];
+
+uint8_t secondaryOAMAddr = 0;
+uint8_t spriteEvalIdx = 0;
+uint8_t allSpritesEvaluated = 0;
+uint8_t spriteByte;
+
 // Declares the four name tables in PPU memory.
 NameTable nTable0;  // $2000
 NameTable nTable1;  // $2400
@@ -234,15 +246,18 @@ void ppuStep(void) {
       else if (scanCount == 240) lineType = POST_RENDER;
       else if (scanCount == 241) {
         lineType = V_BLANK;
+	devPrintPalettes();
         setVerticalBlankStart(1);
       }
       else if (scanCount == 261) lineType = PRE_RENDER;
+      memset(secondaryOAM, 0xFF, sizeof(secondaryOAM)*sizeof(uint8_t));
       break;
     case 241://249:
       cycleType = UNUSED_FETCH;
       break;
-    case 258:
+    case 257:
       cycleType = H_BLANK;
+      secondaryOAMAddr = 0;
       break;
     case 321:
       cycleType = PRE_FETCH;
@@ -254,7 +269,53 @@ void ppuStep(void) {
     default:
       break;
   }
+  
+  if (cycleCount < 65) {
 
+  } else if (cycleCount <= 256) {
+    if (!allSpritesEvaluated) {
+      spriteEvalIdx++;
+    } else if (cycleCount % 2 == 1) {
+      uint8_t y = primaryOAM[spriteEvalIdx];
+      if (secondaryOAMAddr < 32) {
+	secondaryOAM[secondaryOAMAddr] = y;
+	if (y > scanCount && y < scanCount + 9) {
+	  secondaryOAM[++secondaryOAMAddr] = primaryOAM[spriteEvalIdx + 1];
+	  secondaryOAM[++secondaryOAMAddr] = primaryOAM[spriteEvalIdx + 2];
+	  secondaryOAM[++secondaryOAMAddr] = primaryOAM[spriteEvalIdx + 3];
+	  secondaryOAMAddr++;
+	}
+      } else {
+	if (y > scanCount && y < scanCount + 9) {
+	  setSpriteOverflow(1);
+	  if (++spriteByte % 4 == 0) {
+	    spriteByte = 0;
+	    spriteEvalIdx += 4;
+	  }
+	} else {
+	  spriteEvalIdx += 4;
+	  // incrementing of spriteByte below replicates hardware bug that
+	  // causes false positives and false negatives of sprite overflow flag
+	  if (++spriteByte % 4 == 0) {
+	    spriteByte = 0;
+	  }
+	}
+      }
+      spriteEvalIdx += 4;
+      if (spriteEvalIdx == 0) {
+	allSpritesEvaluated = 1;
+      }
+    } else {
+      // even cycle, write to secondary OAM? Already did that during odd cycle..
+    }
+  } else if (cycleCount < 321) {
+    if (cycleCount < 4) {
+      activeSprite[cycleCount] = secondaryOAM[secondaryOAMAddr + cycleCount];
+    } activeSprite[3] = secondaryOAM[secondaryOAMAddr + 3];  // redundant hardware operation
+  } else {
+
+  }
+  if (cycleCount >= 257 && cycleCount <= 320) ppuRegisters.OAMAddress = 0;
   if ((cycleType == STANDARD_FETCH || cycleType == PRE_FETCH) && lineType == VISIBLE) {
     if (cycleCount % 8 == 1) {
       NTByte = fetchNTByte( ( cycleType == STANDARD_FETCH ? 2 + (cycleCount / 8 ) % 32 : 
@@ -351,6 +412,8 @@ void writePictureByte() {
 
   if (addr >= 0x3000 && addr < 0x3F00) addr -= 0x1000;
 
+  if (addr > 0x23c0 && addr < 0x2400) { printf("%X -> %X\n", addr, data); }
+
   if (addr < 0x1000) {
     pTable0[addr] = data;
   } 
@@ -385,8 +448,22 @@ void writePictureByte() {
     imagePalette[addr-0x3F00] = data;
   } 
   else spritePalette[addr-0x3F10] = data;
-  //ppuRegisters.PPUWriteLatch += ((readPictureByte(0x2000) & 0x04) ? 32 : 1);
 }
+
+
+/**
+ * Writes a byte of data into the internal
+ * object attribute memory of the PPU.
+ * @note Address defined by OAMADDR
+ * @note Data defined by OAMDATA
+ */ 
+void writeToOAM(void) {
+  uint8_t addr = ppuRegisters.OAMAddress;
+  uint8_t data = ppuRegisters.OAMData;
+  primaryOAM[addr] = data;
+}
+
+
 
 void devPrintPatternTable0() {
   uint8_t bits;
@@ -400,6 +477,19 @@ void devPrintPatternTable0() {
 void devPrintNameTable0() {
   for (int i = 0; i < 0x3C0; i++) {
     printf("%X: %X\n", 0x2000 + i, nTable0.tbl[i]);
+  }
+}
+
+void devPrintAttributeTable0() {
+  for (int i = 0; i < 64; i++) {
+    printf("%X ", nTable0.attr[i]);
+  }
+}
+
+void devPrintPalettes() {
+  for (int i = 0; i < 0x20; i++) {
+    printf("%X ", (i < 0x10 ? imagePalette[i] : spritePalette[i-0x10]));
+    if (i == 0x0F) printf("\n");
   }
 }
 

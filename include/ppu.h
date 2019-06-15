@@ -14,6 +14,13 @@ typedef struct {
   uint8_t attr[8*8];
 } NameTable;
 
+typedef struct {
+  uint8_t yPos;
+  uint8_t tileIndex;
+  uint8_t attributes;
+  uint8_t xPos;
+} Sprite;
+
 struct color {
   uint8_t rgb[3];
 } __attribute__((packed));
