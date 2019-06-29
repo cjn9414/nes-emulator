@@ -12,7 +12,7 @@ uint8_t ram[0x0800];
 extern MemoryMappedRegisters ppuRegisters;
 uint8_t apu_io_reg[0x0020];
 uint8_t exp_rom[0x1FDF];
-uint8_t sram[0x2000];
+uint8_t sram[PPUCTRL];
 uint8_t prg_rom_lower[0x4000];
 uint8_t prg_rom_upper[0x4000];
 
@@ -26,11 +26,11 @@ uint8_t prg_rom_upper[0x4000];
 uint8_t readByte(uint16_t addr) {
   // Mirroring occurs from $2000-$2007 to $2008-$4000.
   if (addr >= 0x2008 && addr < 0x4000) {
-    addr = 0x2000 + (addr % 0x0008);
+    addr = PPUCTRL + (addr % 0x0008);
   }
 
   // Mirroring occurs from $0000-$07FF to $0800-$1FFF.
-  if (addr < 0x2000) {
+  if (addr < PPUCTRL) {
     addr = addr % 0x800;
    // Addressing the RAM of CPU memory.
     return ram[addr];
@@ -38,19 +38,25 @@ uint8_t readByte(uint16_t addr) {
   // Addressing the PPU registers in CPU memory.
   else if (addr < 0x2008) {
     switch (addr) {
-      case 0x2002:
+      case PPUSTATUS:
+	{
+	uint8_t val = ppuRegisters.PPUStatus;
         ppuRegisters.PPUWriteLatch = 0;
-        return ppuRegisters.PPUStatus;
-      case 0x2004:
+	//ppuRegisters.PPUStatus &= ~(1 << 7);
+	//ppuRegisters.PPUStatus |= (NMIGenerated << 7);
+	NMIGenerated = 0;
+        return val;
+	}
+      case OAMDATA:
         return ppuRegisters.OAMData;
-      case 0x2007:
+      case PPUDATA:
         {
         uint8_t val = ppuRegisters.PPUData;
 	ppuRegisters.PPUWriteLatch += getVRAMIncrement() ? 32 : 1;
         return val;
         }
       default:
-        printf("Error: Unexpected address to memory mapper I/O registers.\n");
+        printf("Error: Unexpected address to memory mapper I/O registers: %X\n", addr);
         exit(1);
     }
   }
@@ -98,11 +104,11 @@ uint8_t readZeroPage(uint8_t addr) {
 void writeByte (uint16_t addr, uint8_t val) {
   // Mirroring occurs from $2000-$2007 to $2008-$4000.
   if (addr >= 0x2008 && addr < 0x4000) {
-    addr = 0x2000 + (addr % 0x0008);
+    addr = PPUCTRL + (addr % 0x0008);
   }
   
   // Mirroring occurs from $0000-$07FF to $0800-$1FFF.
-  if (addr < 0x2000) {
+  if (addr < PPUCTRL) {
     addr = addr % 0x0800;
     // Write to CPU RAM.
     ram[addr] = val;
@@ -110,25 +116,25 @@ void writeByte (uint16_t addr, uint8_t val) {
   // Write to PPU registers in CPU memory.
   else if (addr < 0x2008) {
     switch(addr) {
-      case 0x2000:
+      case PPUCTRL:
         ppuRegisters.PPUControl = val;
         break;
-      case 0x2001:
+      case PPUMASK:
         ppuRegisters.PPUMask = val;
         break;
-      case 0x2003:
+      case OAMADDR:
         OAMAddressWrite(val);
         break;
-      case 0x2004:
+      case OAMDATA:
         OAMDataWrite(val);
         break;
-      case 0x2005:
+      case PPUSCROLL:
         scrollWrite(val);
         break;
-      case 0x2006:
+      case PPUADDR:
         addressWrite(val);
         break;
-      case 0x2007:
+      case PPUDATA:
         dataWrite(val);
         break;
       default:

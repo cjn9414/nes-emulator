@@ -12,6 +12,8 @@ struct registers {
   uint8_t y;
 };
 
+uint8_t NMIGenerated;
+
 void registerPowerup(struct registers*);
 
 #endif

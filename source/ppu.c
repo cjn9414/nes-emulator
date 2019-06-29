@@ -1,6 +1,7 @@
 #include <stdint.h>
 
 #include "ppu.h"
+#include "registers.h"
 #include "display.h"
 #include "memoryMappedIO.h"
 
@@ -233,8 +234,10 @@ void setMirroring(enum MirroringType newMirror) {
  * The cycle of the ppu takes one-third
  * of the time of a cpu cycle.
  * Uses NTSC timing.
+ *
+ * @return 1 if NMI generated, 0 otherwise
  */
-void ppuStep(void) {
+uint8_t ppuStep(void) {
   // Handle state of the current scanline and cycle.
   switch (cycleCount) {
     case 1:
@@ -242,11 +245,15 @@ void ppuStep(void) {
       if (scanCount == 0) {
         lineType = VISIBLE;
         setVerticalBlankStart(0);
+	NMIGenerated = 0;
       }
       else if (scanCount == 240) lineType = POST_RENDER;
       else if (scanCount == 241) {
         lineType = V_BLANK;
         setVerticalBlankStart(1);
+	if (getNMIGeneration()) {
+	  NMIGenerated = 1;
+	}
       }
       else if (scanCount == 261) lineType = PRE_RENDER;
       break;
@@ -277,14 +284,16 @@ void ppuStep(void) {
       uint8_t y = primaryOAM[spriteEvalIdx];
       if (secondaryOAMAddr < 32) {
 	secondaryOAM[secondaryOAMAddr] = y;
-	if (y > scanCount && y < scanCount + 9) {
+	if (y > scanCount && y < 1 + scanCount + 
+			(getSpriteSize() ? SPRITE_8X16_HEIGHT : SPRITE_8X8_HEIGHT)) {
 	  secondaryOAM[++secondaryOAMAddr] = primaryOAM[spriteEvalIdx + 1];
 	  secondaryOAM[++secondaryOAMAddr] = primaryOAM[spriteEvalIdx + 2];
 	  secondaryOAM[++secondaryOAMAddr] = primaryOAM[spriteEvalIdx + 3];
 	  secondaryOAMAddr++;
 	}
       } else {
-	if (y > scanCount && y < scanCount + 9) {
+	if (y > scanCount && y < 1 + scanCount + 
+			(getSpriteSize() ? SPRITE_8X16_HEIGHT : SPRITE_8X8_HEIGHT)) {
 	  setSpriteOverflow(1);
 	  if (++spriteByte % 4 == 0) {
 	    spriteByte = 0;
@@ -353,6 +362,7 @@ void ppuStep(void) {
   if (cycleCount == 256) { scanCount = (lineType == PRE_RENDER ? 0 : scanCount+1); }
   // Increment the cycle and reset it if it equals 340.
   cycleCount = cycleCount == 340 ? 0 : cycleCount + 1;
+  return NMIGenerated;
 }
 
 

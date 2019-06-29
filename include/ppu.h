@@ -1,6 +1,9 @@
 #ifndef PPU_H
 #define PPU_H
 
+#define SPRITE_8X8_HEIGHT 8
+#define SPRITE_8X16_HEIGHT 16
+
 enum MirroringType { HORIZONTAL, VERTICAL, ONE_SCREEN, FOUR_SCREEN };
 
 enum FrameStatus { VISIBLE, V_BLANK, POST_RENDER, PRE_RENDER };

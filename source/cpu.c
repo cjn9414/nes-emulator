@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include "ppu.h"//delete this
+#include "ppu.h"  //delete this
 #include "cpu.h"
 #include "memory.h"
 #include "memoryMappedIO.h"
@@ -135,7 +135,6 @@ void NMInterruptHandler() {
 }
 
 void IRQHandler() {
-  printf("YUH");
   pushStack(regs.pc & 0xFF);
   regs.pc >>= 8;
   pushStack(regs.pc);
@@ -1744,13 +1743,13 @@ void updateCycle(uint16_t addr, uint8_t offset) {
   //}
 }
 
-
+uint32_t c = 0;
 /**
  * Reads the next instruction from the PRG-ROM
  * and executes it. Increments the stack pointer to
  * the next opcode instruction.
  */
-void step(void) {
+void step(uint8_t nmi_gen) {
   uint8_t opcode = readByte(regs.pc);
   uint8_t time = cycles[opcode];
   uint8_t len = opcodes[opcode].operands;

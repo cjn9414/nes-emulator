@@ -169,10 +169,11 @@ int main(int argc, char **argv) {
   displayInit();
   // Run the emulator display and perform CPU step.
   while (1) {
-    step();
     ppuStep();
     ppuStep();
     ppuStep();
+    // pass in 1-bit register that gets set when NMI occurs in PPU.
+    step(NMIGenerated);
     if (!getDisplayStatus()) break;
   }
   // Free dynamically allocated memory.

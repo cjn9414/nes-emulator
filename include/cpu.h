@@ -18,6 +18,6 @@ struct opcode {
   u_int8_t operands;
 } extern const opcodes[256];
 
-void step(void);
+void step(uint8_t);
 
 #endif
