@@ -16,8 +16,8 @@ void cpuRegisterPowerup(struct registers* regs) {
   regs->a = 0;
   regs->x = 0;
   regs->y = 0;
-  regs->pc = (readByte(0xFFFD) << 8) + readByte(0xFFFC);
-  //regs->pc = logger ? 0xC000 : (readByte(0xFFFD) << 8) + readByte(0xFFFC);
+  //regs->pc = (readByte(0xFFFD) << 8) + readByte(0xFFFC);
+  regs->pc = logger ? 0xC000 : (readByte(0xFFFD) << 8) + readByte(0xFFFC);
 }
 
 

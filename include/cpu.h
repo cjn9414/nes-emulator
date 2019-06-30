@@ -3,14 +3,21 @@
 
 #include <sys/types.h>
 
-enum AddressMode{ ZERO_PAGE, ZERO_PAGE_X, ZERO_PAGE_Y,
+typedef enum AddressMode{ ZERO_PAGE, ZERO_PAGE_X, ZERO_PAGE_Y,
                    ABSOLUTE,  ABSOLUTE_X,  ABSOLUTE_Y,
                    INDIRECT,  INDIRECT_X,  INDIRECT_Y,
                    IMPLIED,   IMMEDIATE,   RELATIVE,
                    ACCUMULATOR,
-                   INVALID };
+                   INVALID } AddressMode;
 
-typedef void (*FunctionExecute)(uint8_t, uint8_t);
+typedef struct FunctionExecute {
+  union {
+    void (*FunctionEx_0Arg)(void);
+    void (*FunctionEx_1Arg)(AddressMode);
+    void (*FunctionEx_2Arg)(uint8_t, AddressMode);
+    void (*FunctionEx_3Arg)(uint8_t, uint8_t, AddressMode);
+  }
+} FunctionExecute;
 
 struct opcode {
   uint8_t code[3];

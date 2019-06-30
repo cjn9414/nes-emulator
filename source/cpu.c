@@ -19,7 +19,7 @@ extern uint8_t prg_rom_upper[0x4000];
 
 uint32_t cycle = 7;
 
-void nan(uint8_t, uint8_t);
+void nan(void);
 
 uint8_t interrupted = 0;
 
@@ -127,17 +127,14 @@ uint8_t getFlagOverflow(void) { return getBit(regs.p, 6); }
 uint8_t getFlagNegative(void) { return getBit(regs.p, 7); }
 
 void NMInterruptHandler() {
-  pushStack(regs.pc & 0xFF);
-  regs.pc >>= 8;
+  pushStack(regs.pc >> 8);
   pushStack(regs.pc);
   pushStack(regs.p);
   regs.pc = (readByte(0xFFFB) << 8) + readByte(0xFFFA);
 }
 
 void IRQHandler() {
-  printf("YUH");
-  pushStack(regs.pc & 0xFF);
-  regs.pc >>= 8;
+  pushStack(regs.pc >> 8);
   pushStack(regs.pc);
   pushStack(regs.p);
   regs.pc = (readByte(0xFFFF) << 8) + readByte(0xFFFE);
@@ -212,19 +209,128 @@ void branchJump(uint8_t val) {
   }
 }
 
+uint8_t fetchArgument(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  uint8_t val;
+  switch (mode) {
+    case IMMEDIATE:
+      val = arg1;
+      break;
+    case ZERO_PAGE:
+      val = readZeroPage(arg1);
+      break;
+    case ZERO_PAGE_X:
+      val = readZeroPage(arg1 + regs.x);
+      break;
+    case ZERO_PAGE_Y:
+      val = readZeroPage(arg1 + regs.y);
+      break;
+    case INDIRECT_X:
+      {
+      uint16_t addr = readZeroPage(arg1 + regs.x) + (readZeroPage(arg1 + regs.x + 1) << 8);
+      val = readByte(addr);
+      break;
+      }
+    case INDIRECT_Y:
+      {
+      uint16_t addr = readZeroPage(arg1) + (readZeroPage(arg1 + 1) << 8);
+      addr += regs.y;
+      val = readByte(addr);
+      break;
+      }
+    case ABSOLUTE:
+      {
+      uint16_t addr = (arg2 << 8) + arg1;
+      val = readByte(addr);
+      break;
+      }
+    case ABSOLUTE_X:
+      {
+      uint16_t addr = (arg2 << 8) + arg1 + regs.x;
+      val = readByte(addr);
+      break;
+      }
+    case ABSOLUTE_Y:
+      {
+      uint16_t addr = (arg2 << 8) + arg1 + regs.y;
+      val = readByte(addr);
+      break;
+      }
+    default:
+      printf("Invalid addressing mode: %X Terminating.\n", mode);
+      exit(1);
+      break;
+  }
+  return val;
+}
+
+void dataWriteBack(uint8_t val, uint8_t mode, uint8_t arg1, uint8_t arg2) {
+  switch (mode) {
+    case ZERO_PAGE:
+      writeZeroPage(arg1, val);
+      break;
+    case ZERO_PAGE_X:
+      writeZeroPage(arg1 + regs.x, val);
+      break;
+    case ZERO_PAGE_Y:
+      writeZeroPage(arg1 + regs.y, val);
+      break;
+    case INDIRECT_X:
+      {
+      uint16_t addr = readZeroPage(arg1 + regs.x) + (readZeroPage(arg1 + regs.x + 1) << 8);
+      writeByte(addr, val);
+      break;
+      }
+    case INDIRECT_Y:
+      {
+      uint16_t addr = readZeroPage(arg1) + (readZeroPage(arg1 + 1) << 8);
+      addr += regs.y;
+      writeByte(addr, val);
+      break;
+      }
+    case ABSOLUTE:
+      {
+      uint16_t addr = arg1 + (arg2 << 8);
+      writeByte(addr, val);
+      break;
+      }
+    case ABSOLUTE_X:
+      {
+      uint16_t addr = arg1 + (arg2 << 8) + regs.x;
+      writeByte(addr, val);
+      break;
+      }
+    case ABSOLUTE_Y:
+      {
+      uint16_t addr = arg1 + (arg2 << 8) + regs.y;
+      writeByte(addr, val);
+      break;
+      }
+  }
+}
 
 /*************************************/
 /* START OF OFFICIAL OPCODE FUNCTIONS*/
 /*************************************/
 
-void nan(uint8_t garb0, uint8_t garb1) {
+void nan(void) {
   printf("Error: Invalid opcode!.\n");
   exit(1);
 }
 
-void brk(uint8_t garb0, uint8_t garb1) { setFlagBreak(1); }
+void brk(void) { setFlagBreak(1); }
 
-void adc_imm(uint8_t val, uint8_t res) {
+/**
+ * @brief performs add with carry operation on accumulator register.
+ * @note carry bit comes from carry flag of status register.
+ * @modes: IMM, ZP, ZP_X, IND_X, IND_Y, ABS, ABS_X, ABS_Y
+ * @param arg1, arg2: first and second instruction operands.
+ *        If an ADC instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void adc(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  uint8_t val, res;
+  val = fetchArgument(mode, arg1, arg2);
   res = val + regs.a + getFlagCarry();
   VFlag(val, regs.a, res);
   res < regs.a ? setFlagCarry(1) : setFlagCarry(0);
@@ -232,451 +338,425 @@ void adc_imm(uint8_t val, uint8_t res) {
   SZFlags(regs.a);
 }
 
-void adc_zp(uint8_t val, uint8_t res) {
-  val = readZeroPage(val);
-  res = val + regs.a + getFlagCarry();
-  VFlag(val, regs.a, res);
-  res < regs.a ? setFlagCarry(1) : setFlagCarry(0);
-  regs.a = res;
-  SZFlags(regs.a);
-}
 
-void adc_zp_x(uint8_t val, uint8_t res) {
-  val = readZeroPage(val + regs.x);
-  res = val + regs.a + getFlagCarry();
-  VFlag(val, regs.a, res);
-  res < regs.a ? setFlagCarry(1) : setFlagCarry(0);
-  regs.a = res;
-  SZFlags(regs.a);
-}
-
-void adc_ind_x(uint8_t val, uint8_t res) {
-  uint16_t addr = readZeroPage(val + regs.x) + (readZeroPage(val + regs.x + 1) << 8);
-  val = readByte(addr);
-  res = val + regs.a + getFlagCarry();
-  VFlag(val, regs.a, res);
-  res < regs.a ? setFlagCarry(1) : setFlagCarry(0);
-  regs.a = res;
-  SZFlags(regs.a);
-}
-
-void adc_ind_y(uint8_t val, uint8_t res) {
-  uint16_t addr = readZeroPage(val) + (readZeroPage(val + 1) << 8);
-  addr += regs.y;
-  val = readByte(addr);
-  res = val + regs.a + getFlagCarry();
-  VFlag(val, regs.a, res);
-  res < regs.a ? setFlagCarry(1) : setFlagCarry(0);
-  regs.a = res;
-  SZFlags(regs.a);
-  updateCycle(addr, regs.y);
-}
-
-void adc_abs(uint8_t lower, uint8_t upper) {
-  uint8_t res;
-  uint16_t addr = (upper << 8) + lower;
-  lower = readByte(addr);
-  res = lower + regs.a + getFlagCarry();
-  VFlag(lower, regs.a, res);
-  res < regs.a ? setFlagCarry(1) : setFlagCarry(0);
-  regs.a = res;
-  SZFlags(regs.a); 
-}
-
-void adc_abs_x(uint8_t lower, uint8_t upper) {
-  uint8_t res;
-  uint16_t addr = (upper << 8) + lower + regs.x;
-  lower = readByte(addr);
-  res = lower + regs.a + getFlagCarry();
-  VFlag(lower, regs.a, res);
-  res < regs.a ? setFlagCarry(1) : setFlagCarry(0);
-  regs.a = res;
-  SZFlags(regs.a); 
-  updateCycle(addr, regs.x);
-}
-
-void adc_abs_y(uint8_t lower, uint8_t upper) {
-  uint8_t res;
-  uint16_t addr = (upper << 8) + lower + regs.y;
-  lower = readByte(addr);
-  res = lower + regs.a + getFlagCarry();
-  VFlag(lower, regs.a, res);
-  res < regs.a ? setFlagCarry(1) : setFlagCarry(0);
-  regs.a = res;
-  SZFlags(regs.a); 
-  updateCycle(addr, regs.y);
-}
-
-void and_ind_x(uint8_t val, uint8_t garb) {
-  uint16_t addr = (readZeroPage(regs.x + val + 1) << 8) + readZeroPage(regs.x + val); 
-  val = regs.a & readByte(addr);
-  SZFlags(val);
-  regs.a = val;
-};
-
-void and_ind_y(uint8_t val, uint8_t garb) {
-  uint16_t addr = (readZeroPage(val + 1) << 8) + readZeroPage(val); 
-  addr += regs.y;
-  val = regs.a & readByte(addr);
-  SZFlags(val);
-  regs.a = val;
-  updateCycle(addr, regs.y);
-}
-
-void and_imm(uint8_t val, uint8_t garb) {
-  val = regs.a & val;
+/**
+ * @brief performs and operation with accumulator register.
+ * @modes: IMM, ZP, ZP_X, IND_X, IND_Y, ABS, ABS_X, ABS_Y
+ * @param arg1, arg2: first and second instruction operands.
+ *        If an AND instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void and(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  uint8_t val, res;
+  val = fetchArgument(mode, arg1, arg2);
+  val &= regs.a;
   SZFlags(val);
   regs.a = val;
 }
 
-void and_zp(uint8_t val, uint8_t garb) {
-  val = readZeroPage(val) & regs.a;
-  SZFlags(val);
-  regs.a = val;
-}
 
-void and_zp_x(uint8_t val, uint8_t garb) {
-  val = readZeroPage(val+regs.x) & regs.a;
-  SZFlags(val);
-  regs.a = val;
-}
 
-void and_abs(uint8_t lower, uint8_t upper) {  
-  uint16_t addr = (upper << 8) + lower;
-  lower = readByte(addr) & regs.a;
-  SZFlags(lower);
-  regs.a = lower;
-}
-
-void and_abs_x(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower + regs.x;
-  lower = readByte(addr) & regs.a;
-  SZFlags(lower);
-  regs.a = lower;
-  updateCycle(addr, regs.x);
-}
-
-void and_abs_y(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower + regs.y;
-  lower = readByte(addr) & regs.a;
-  SZFlags(lower);
-  regs.a = lower;
-  updateCycle(addr, regs.y);
-}
-
-void asl_acc(uint8_t garb0, uint8_t garb1) { 
-  setFlagCarry(getBit(regs.a, 7));
-  regs.a = regs.a << 1;
-  SZFlags(regs.a);
-}
-
-void asl_zp(uint8_t addr, uint8_t val) {
-  val = readZeroPage(addr);
-  setFlagCarry(getBit(val, 7));
-  val = val << 1;
-  writeZeroPage(addr, val); 
+/**
+ * @brief performs arithmetic shift left operation in memory.
+ * @modes: ACC, ZP, ZP_X, ABS, ABS_X
+ * @param arg1, arg2: first and second instruction operands.
+ *        If instruction has no first or second arguments,
+ *        arg1 or arg2 is disregarded, respectively.
+ * @param mode: addressing mode of instruction
+ */
+void asl(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  uint8_t val, res;
+  if (mode == ACCUMULATOR) {
+    setFlagCarry(getBit(regs.a, 7));
+    regs.a <<= 1;
+    val = regs.a;
+  } else {
+    val = fetchArgument(mode, arg1, arg2);
+    setFlagCarry(getBit(val, 7));
+    val <<= 1;
+    dataWriteBack(val, mode, arg1, arg2);
+  }
   SZFlags(val);
 }
 
-void asl_zp_x(uint8_t addr, uint8_t val) {
-  addr += regs.x;
-  val = readZeroPage(addr);
-  setFlagCarry(getBit(val, 7));
-  val = val << 1;
-  writeZeroPage(addr, val);
-  SZFlags(val);
-}
 
-void asl_abs(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower;
-  lower = readByte(addr);
-  setFlagCarry(getBit(lower, 7));
-  lower = lower << 1;
-  writeByte(addr, lower);
-}
-
-void asl_abs_x(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower + regs.x;
-  lower = readByte(addr);
-  setFlagCarry(getBit(lower, 7));
-  lower = lower << 1;
-  writeByte(addr, lower);
-}
-
-void bit_zp(uint8_t val, uint8_t garb) {
-  val = readZeroPage(val);
+/**
+ * @brief performs bit test on byte in memory.
+ * @modes: ZP, ABS
+ * @param arg1, arg2: first and second instruction operands.
+ *        If instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void bit(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  uint8_t val;
+  val = fetchArgument(mode, arg1, arg2);
   setFlagNegative(getBit(val, 7));
   setFlagOverflow(getBit(val, 6));
   setFlagZero((val & regs.a) != 0 ? 0 : 1);
 }
 
-void bit_abs(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower;
-  lower = readByte(addr);
-  setFlagNegative(getBit(lower, 7));
-  setFlagOverflow(getBit(lower, 6));
-  setFlagZero((lower & regs.a) != 0 ? 0 : 1);
-}
-
-void bpl(uint8_t val, uint8_t garb) {  
+void bpl(AddressMode unused, uint8_t val) {  
   if (!getFlagNegative()) {
     branchJump(val);
   }
 }
 
-void bmi(uint8_t val, uint8_t garb) {  
+void bmi(AddressMode unused, uint8_t val) {  
   if (getFlagNegative()) {
     branchJump(val);
   }
 }
 
-void bvc(uint8_t val, uint8_t garb) {  
+void bvc(AddressMode unused, uint8_t val) {  
   if (!getFlagOverflow()) {
     branchJump(val);
   }
 }
 
-void bvs(uint8_t val, uint8_t garb) {  
+void bvs(AddressMode unused, uint8_t val) {  
   if (getFlagOverflow()) {
     branchJump(val);
   }
 }
 
-void bcc(uint8_t val, uint8_t garb) {  
+void bcc(AddressMode unused, uint8_t val) {  
   if (!getFlagCarry()) {
     branchJump(val);
   }
 }
 
-void bcs(uint8_t val, uint8_t garb) {  
+void bcs(AddressMode unused, uint8_t val) {  
   if (getFlagCarry()) {
     branchJump(val);
   }
 }
 
-void bne(uint8_t val, uint8_t garb) {  
+void bne(AddressMode unused, uint8_t val) {  
   if (!getFlagZero()) {
     branchJump(val);
   }
 }
 
-void beq(uint8_t val, uint8_t garb) {  
+void beq(AddressMode unused, uint8_t val) {  
   if (getFlagZero()) {
     branchJump(val);
   }
 }
 
-void cmp_imm(uint8_t val, uint8_t garb) {
+
+/**
+ * @brief performs a compare of accumulator with an addressable argument
+ * @modes IMM, ZP, ZP_X, IND_X, IND_Y, ABS, ABS_X, ABS_Y
+ * @param arg1, arg2: first and second instruction operands.
+ *        If instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void cmp(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  uint8_t val, res;
+  val = fetchArgument(mode, arg1, arg2);
   flagCompare(regs.a, val);
 }
 
-void cmp_zp(uint8_t val, uint8_t garb) {
-  val = readZeroPage(val);
-  flagCompare(regs.a, val);
-}
 
-void cmp_zp_x(uint8_t val, uint8_t garb) {
-  val = readZeroPage(val + regs.x);
-  flagCompare(regs.a, val);
-}
-
-void cmp_ind_x(uint8_t val, uint8_t garb) {
-  uint16_t addr;
-  addr = (readZeroPage(val + regs.x + 1) << 8) + readZeroPage(val + regs.x);
-  val = readByte(addr);
-  flagCompare(regs.a, val);
-}
-
-void cmp_ind_y(uint8_t val, uint8_t garb) {
-  uint16_t addr;
-  addr = (readZeroPage(val + 1) << 8) + readZeroPage(val);
-  addr += regs.y;
-  val = readByte(addr);
-  flagCompare(regs.a, val);
-  updateCycle(addr, regs.y);
-}
-
-void cmp_abs(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower;
-  lower = readByte(addr);
-  flagCompare(regs.a, lower);
-}
-
-void cmp_abs_x(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower + regs.x;
-  lower = readByte(addr);
-  flagCompare(regs.a, lower);
-  updateCycle(addr, regs.x);
-}
-
-void cmp_abs_y(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower + regs.y;
-  lower = readByte(addr);
-  flagCompare(regs.a, lower);
-  updateCycle(addr, regs.y);
-}
-
-void cpx_imm(uint8_t val, uint8_t garb) {
+/**
+ * @brief performs a compare of X register with an addressable argument
+ * @modes IMM, ZP, ABS
+ * @param arg1, arg2: first and second instruction operands.
+ *        If instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void cpx(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  uint8_t val, res;
+  val = fetchArgument(mode, arg1, arg2);
   flagCompare(regs.x, val);
 }
 
-void cpx_zp(uint8_t val, uint8_t garb) {
-  val = readZeroPage(val);
-  flagCompare(regs.x, val);
-}
 
-void cpx_abs(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower;
-  lower = readByte(addr);
-  flagCompare(regs.x, lower);
-}
-
-void cpy_imm(uint8_t val, uint8_t garb) {
+/**
+ * @brief performs a compare of Y register with an addressable argument
+ * @modes IMM, ZP, ABS
+ * @param arg1, arg2: first and second instruction operands.
+ *        If instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void cpy(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  uint8_t val, res;
+  val = fetchArgument(mode, arg1, arg2);
   flagCompare(regs.y, val);
 }
 
-void cpy_zp(uint8_t val, uint8_t garb) {
-  val = readZeroPage(val);
-  flagCompare(regs.y, val);
+
+/**
+ * @brief performs a decrement of byte in memory addressed by argument
+ * @modes ZP, ZP_X, ABS, ABS_X
+ * @param arg1, arg2: first and second instruction operands.
+ *        If instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void dec(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  uint8_t val, res;
+  val = fetchArgument(mode, arg1, arg2) - 1;
+  dataWriteBack(val, mode, arg1, arg2);
+  SZFlags(val);
 }
 
-void cpy_abs(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower;
-  lower = readByte(addr);
-  flagCompare(regs.y, lower);
-}
-
-
-
-void dec_zp(uint8_t addr, uint8_t garb) {
-  garb = readZeroPage(addr) - 1;
-  writeZeroPage(addr, garb);
-  SZFlags(garb);
-}
-
-void dec_zp_x(uint8_t addr, uint8_t garb) {
-  addr += regs.x;
-  garb = readZeroPage(addr) - 1;
-  writeZeroPage(addr, garb);
-  SZFlags(garb);
-}
-
-void dec_abs(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower;
-  lower = readByte(addr) - 1;
-  writeByte(addr, lower);
-  SZFlags(lower);
-}
-
-void dec_abs_x(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower + regs.x;
-  lower = readByte(addr) - 1;
-  writeByte(addr, lower);
-  SZFlags(lower);
-}
-
-void eor_imm(uint8_t val, uint8_t garb) {
+/**
+ * @brief performs an exclusive or into accumulator by an addressable argument
+ * @modes IMM, ZP, ZP_X, IND_X, IND_Y, ABS, ABS_X, ABS_Y
+ * @param arg1, arg2: first and second instruction operands.
+ *        If instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void eor(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  uint8_t val, res;
+  val = fetchArgument(mode, arg1, arg2);
   regs.a = regs.a ^ val;
   SZFlags(regs.a);
 }
 
-void eor_zp(uint8_t val, uint8_t garb) {
-  regs.a = regs.a ^ readZeroPage(val);
+/**
+ * @brief performs an increment of byte in memory addressed by argument
+ * @modes ZP, ZP_X, ABS, ABS_X
+ * @param arg1, arg2: first and second instruction operands.
+ *        If instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void inc(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  uint8_t val;
+  val = fetchArgument(mode, arg1, arg2) + 1;
+  dataWriteBack(val, mode, arg1, arg2);
+  SZFlags(val);
+}
+
+/**
+ * @brief performs a jump to an addressable argument address
+ * @modes ABS, IND
+ * @param arg1, arg2: first and second instruction operands.
+ *        If instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void jmp(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  uint16_t addr = (arg2 << 8) + arg1;
+  if (mode == INDIRECT) { 
+    addr = readByte(addr) + (readByte(addr + 
+      (addr % 0x100 == 0xFF ? -0xFF : 1)) << 8);
+  }
+  regs.pc = addr;
+}
+
+
+/**
+ * @brief performs load into X register by an addressable argument
+ * @modes IMM, ZP, ZP_X, ABS, ABS_X
+ * @param arg1, arg2: first and second instruction operands.
+ *        If instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void ldx(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  regs.x = fetchArgument(mode, arg1, arg2);
+  SZFlags(regs.x);
+}
+
+/**
+ * @brief performs load into Y register by an addressable argument
+ * @modes IMM, ZP, ABS
+ * @param arg1, arg2: first and second instruction operands.
+ *        If instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void ldy(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  regs.y = fetchArgument(mode, arg1, arg2);
+  SZFlags(regs.y);
+}
+
+/**
+ * @brief performs load into accumulator by an addressable argument
+ * @modes IMM, ZP, ZP_X, IND_X, IND_Y, ABS, ABS_X, ABS_Y
+ * @param arg1, arg2: first and second instruction operands.
+ *        If instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void lda(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  regs.a = fetchArgument(mode, arg1, arg2);
   SZFlags(regs.a);
+
 }
 
-void eor_zp_x(uint8_t val, uint8_t garb) {
-  regs.a = regs.a ^ readZeroPage(val + regs.x);
+/**
+ * @brief performs a logical shift right of an addressable argument in memory
+ * @modes ACC, ZP, ZP_X, ABS, ABS_X
+ * @param arg1, arg2: first and second instruction operands.
+ *        If instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void lsr(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  uint8_t val;
+  if (mode == ACCUMULATOR) {
+    setFlagCarry(getBit(regs.a, 0));
+    regs.a >>= 1;
+    val = regs.a;
+  } else {
+    val = fetchArgument(mode, arg1, arg2);
+    setFlagCarry(getBit(val, 0));
+    val >>= 1;
+    dataWriteBack(val, mode, arg1, arg2); 
+  }
+  SZFlags(val);
+}
+
+void nop(void) { return; }
+
+/**
+ * @brief performs an or operation into accumulator by an addressable argument
+ * @modes IMM, ZP, ZP_X, IND_X, IND_Y, ABS, ABS_X, ABS_Y
+ * @param arg1, arg2: first and second instruction operands.
+ *        If instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void ora(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  uint8_t val;
+  val = fetchArgument(mode, arg1, arg2);
+  val |= regs.a;
+  SZFlags(val);
+  regs.a = val;
+}
+
+/**
+ * @brief performs a rotate left with an addressable argument
+ * @modes ACC, ZP, ZP_X, ABS, ABS_X
+ * @param arg1, arg2: first and second instruction operands.
+ *        If instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void rol(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  uint8_t val, res;
+  uint8_t lsb = getFlagCarry();
+  if (mode == ACCUMULATOR) {
+    setFlagCarry(regs.a >> 7);
+    res = (regs.a << 1) | lsb;
+    regs.a = res;
+  } else {
+    val = fetchArgument(mode, arg1, arg2);
+    setFlagCarry(val >> 7);
+    res = (val << 1) | lsb;
+    dataWriteBack(res, mode, arg1, arg2);
+  }
+  SZFlags(res);
+}
+
+/**
+ * @brief performs a rotate right with an addressable argument
+ * @modes ACC, ZP, ZP_X, ABS, ABS_X
+ * @param arg1, arg2: first and second instruction operands.
+ *        If instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void ror(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  uint8_t val, res;
+  uint8_t msb = getFlagCarry() << 7;
+  if (mode == ACCUMULATOR) {
+    setFlagCarry(regs.a << 7);
+    res = msb | (regs.a >> 1);
+    regs.a = res;
+  } else  {
+    val = fetchArgument(mode, arg1, arg2);
+    setFlagCarry(val << 7);
+    res = msb | (val >> 1);
+    dataWriteBack(res, mode, arg1, arg2);
+  }
+  SZFlags(res);
+}
+
+/**
+ * @brief performs a subtract with carry of accumulator with argument(s)
+ * @modes IMM, ZP, ZP_X, IND_X, IND_Y, ABS, ABS_X, ABS_Y
+ * @param arg1, arg2: first and second instruction operands.
+ *        If instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void sbc(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  uint8_t val, res;
+  val = fetchArgument(mode, arg1, arg2);
+  val = ~val + 1 - (getFlagCarry() ? 0 : 1);
+  res = val + regs.a;
+  VFlag(val, regs.a, res);
+  regs.a = res;
   SZFlags(regs.a);
+  (res >= 0 && res < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
 }
 
-void eor_ind_x(uint8_t val, uint8_t garb) {
-  uint16_t addr;
-  addr = (readZeroPage(val + regs.x + 1) << 8) + readZeroPage(val + regs.x);
-  regs.a = regs.a ^ readByte(addr);
-  SZFlags(regs.a);
+
+/**
+ * @brief performs a store of accumulator into addressable argument
+ * @modes ZP, ZP_X, IND_X, IND_Y, ABS, ABS_X, ABS_Y
+ * @param arg1, arg2: first and second instruction operands.
+ *        If instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void sta(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  dataWriteBack(regs.a, mode, arg1, arg2);
 }
 
-void eor_ind_y(uint8_t val, uint8_t garb) {
-  uint16_t addr = (readZeroPage(val + 1) << 8) + readZeroPage(val);
-  addr += regs.y;
-  regs.a = regs.a ^ readByte(addr);
-  SZFlags(regs.a);
-  updateCycle(addr, regs.y);
+
+/**
+ * @brief performs a store of X register into addressable argument
+ * @modes ZP, ZP_Y, ABS
+ * @param arg1, arg2: first and second instruction operands.
+ *        If instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void stx(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  dataWriteBack(regs.x, mode, arg1, arg2);
 }
 
-void eor_abs(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower;
-  regs.a = regs.a ^ readByte(addr);
-  SZFlags(regs.a);
+
+/**
+ * @brief performs a store of Y register into addressable argument
+ * @modes ZP, ZP_X, ABS
+ * @param arg1, arg2: first and second instruction operands.
+ *        If instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void sty(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  dataWriteBack(regs.y, mode, arg1, arg2);
 }
 
-void eor_abs_x(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower + regs.x;
-  regs.a = regs.a ^ readByte(addr);
-  SZFlags(regs.a);
-  updateCycle(addr, regs.x);
-}
 
-void eor_abs_y(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower + regs.y;
-  regs.a = regs.a ^ readByte(addr);
-  SZFlags(regs.a);
-  updateCycle(addr, regs.y);
-}
+void clc(void) { setFlagCarry(0); }
 
-void clc(uint8_t garb0, uint8_t garb1) { setFlagCarry(0); }
+void sec(void) { setFlagCarry(1); }
 
-void sec(uint8_t garb0, uint8_t garb1) { setFlagCarry(1); }
+void cli(void) { setFlagInterrupt(0); }
 
-void cli(uint8_t garb0, uint8_t garb1) { setFlagInterrupt(0); }
+void sei(void) { setFlagInterrupt(1); }
 
-void sei(uint8_t garb0, uint8_t garb1) { setFlagInterrupt(1); }
+void clv(void) { setFlagOverflow(0); }
 
-void clv(uint8_t garb0, uint8_t garb1) { setFlagOverflow(0); }
+void cld(void) { setFlagDecimal(0); }
 
-void cld(uint8_t garb0, uint8_t garb1) { setFlagDecimal(0); }
+void sed(void) { setFlagDecimal(1); }
 
-void sed(uint8_t garb0, uint8_t garb1) { setFlagDecimal(1); }
-
-void inc_zp(uint8_t addr, uint8_t garb) {
-  garb =  readZeroPage(addr) + 1;
-  writeZeroPage(addr, garb);
-  SZFlags(garb);
-}
-
-void inc_zp_x(uint8_t addr, uint8_t garb) {
-  addr += regs.x;
-  garb = readZeroPage(addr) + 1;
-  writeZeroPage(addr, garb);
-  SZFlags(garb);
-}
-
-void inc_abs(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower;
-  lower = readByte(addr) + 1;
-  writeByte(addr, lower);
-  SZFlags(lower);
-}
-
-void inc_abs_x(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower + regs.x;
-  lower = readByte(addr) + 1;
-  writeByte(addr, lower);
-  SZFlags(lower);
-}
-
-void jmp_abs(uint8_t lower, uint8_t upper) {
-  regs.pc = (upper << 8) + lower;
-}
-
-void jmp_ind(uint8_t lower, uint8_t upper) {
-  uint16_t addr = lower + (upper << 8);
-  regs.pc = readByte(addr) + (readByte(addr + 
-  (addr % 0x100 == 0xFF ? -0xFF : 1)) << 8);
-}
-
-void jsr(uint8_t lower, uint8_t upper) {
+void jsr(AddressMode unused, uint8_t lower, uint8_t upper) {
   uint16_t val = regs.pc + 3 - 1;
   pushStack(val >> 8);
   pushStack(val & 0x00FF);
@@ -684,721 +764,161 @@ void jsr(uint8_t lower, uint8_t upper) {
   regs.pc = val;
 }
 
-void ldx_imm(uint8_t addr, uint8_t garb) {
-  regs.x = addr;
-  SZFlags(regs.x);
-}
-
-void ldx_zp(uint8_t addr, uint8_t garb) {
-  regs.x = readZeroPage(addr);
-  SZFlags(regs.x);
-}
-
-void ldx_zp_y(uint8_t addr, uint8_t garb) {
-  regs.x = readZeroPage(addr + regs.y);
-  SZFlags(regs.x);
-}
-
-void ldx_abs(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower;
-  regs.x = readByte(addr);
-  SZFlags(regs.x);
-}
-
-void ldx_abs_y(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower + regs.y;
-  regs.x = readByte(addr);
-  SZFlags(regs.x);
-  updateCycle(addr, regs.y);
-}
-
-void ldy_imm(uint8_t addr, uint8_t garb) {
-  regs.y = addr;
-  SZFlags(regs.y);
-}
-
-void ldy_zp(uint8_t addr, uint8_t garb) {
-  regs.y = readZeroPage(addr);
-  SZFlags(regs.y);
-}
-
-void ldy_zp_x(uint8_t addr, uint8_t garb) {
-  regs.y = readZeroPage(addr + regs.x);
-  SZFlags(regs.y);
-}
-
-void ldy_abs(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower;
-  regs.y = readByte(addr);
-  SZFlags(regs.y);
-}
-
-void ldy_abs_x(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower + regs.x;
-  regs.y = readByte(addr);
-  SZFlags(regs.y);
-  updateCycle(addr, regs.x);
-}
-
-
-void lda_imm(uint8_t addr, uint8_t garb) {
-  regs.a = addr;
-  SZFlags(regs.a);
-}
-
-void lda_zp(uint8_t addr, uint8_t garb) {
-  regs.a = readZeroPage(addr);
-  SZFlags(regs.a);
-}
-
-void lda_zp_x(uint8_t addr, uint8_t garb) {
-  regs.a = readZeroPage(addr + regs.x);
-  SZFlags(regs.a);
-}
-
-void lda_abs(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower;
-  regs.a = readByte(addr);
-  SZFlags(regs.a);
-}
-
-void lda_abs_x(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower + regs.x;
-  regs.a = readByte(addr);
-  SZFlags(regs.a);
-  updateCycle(addr, regs.x);
-}
-
-void lda_abs_y(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower + regs.y;
-  regs.a = readByte(addr);
-  SZFlags(regs.a);
-  updateCycle(addr, regs.y);
-}
-
-void lda_ind_x(uint8_t val, uint8_t garb) {
-  uint16_t addr = (readZeroPage(val + regs.x + 1) << 8) + readZeroPage(val + regs.x);
-  regs.a = readByte(addr);
-  SZFlags(regs.a);
-}
-
-void lda_ind_y(uint8_t val, uint8_t garb) {
-  uint16_t addr = (readZeroPage(val + 1) << 8) + readZeroPage(val);
-  addr += regs.y;
-  regs.a = readByte(addr);
-  SZFlags(regs.a);
-  updateCycle(addr, regs.y);
-}
-
-void lsr_acc(uint8_t garb0, uint8_t garb1) { 
-  setFlagCarry(getBit(regs.a, 0));
-  regs.a = regs.a >> 1;
-  SZFlags(regs.a);
-}
-
-void lsr_zp(uint8_t addr, uint8_t garb) {
-  uint8_t val = readZeroPage(addr);
-  setFlagCarry(getBit(val, 0));
-  val = val >> 1;
-  writeZeroPage(addr, val); 
-  SZFlags(val);
-}
-
-void lsr_zp_x(uint8_t addr, uint8_t garb) {
-  addr += regs.x;
-  uint8_t val = readZeroPage(addr);
-  setFlagCarry(getBit(val, 0));
-  val = val >> 1;
-  writeZeroPage(addr, val);
-  SZFlags(val);
-}
-
-void lsr_abs(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower;
-  lower = readByte(addr);
-  setFlagCarry(getBit(lower, 0));
-  lower = lower >> 1;
-  writeByte(addr, lower);
-}
-
-void lsr_abs_x(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower + regs.x;
-  lower = readByte(addr);
-  setFlagCarry(getBit(lower, 0));
-  lower = lower >> 1;
-  writeByte(addr, lower);
-}
-
-void nop(uint8_t garb0, uint8_t garb1) { return; }
-
-void ora_ind_x(uint8_t val, uint8_t garb) {
-  uint16_t addr = (readZeroPage(regs.x + val + 1) << 8) + readZeroPage(regs.x + val); 
-  val = regs.a | readByte(addr);
-  SZFlags(val);
-  regs.a = val;
-};
-
-void ora_ind_y(uint8_t val, uint8_t garb) {
-  uint16_t addr = (readZeroPage(val + 1) << 8) + readZeroPage(val); 
-  addr += regs.y;
-  val = regs.a | readByte(addr);
-  SZFlags(val);
-  regs.a = val;
-  updateCycle(addr, regs.y);
-}
-
-void ora_imm(uint8_t val, uint8_t garb) {   //0x09
-  val = regs.a | val;
-  SZFlags(val);
-  regs.a = val;
-}
-
-void ora_zp(uint8_t val, uint8_t garb) {  //0x05
-  val = readZeroPage(val) | regs.a;
-  SZFlags(val);
-  regs.a = val;
-}
-
-void ora_zp_x(uint8_t val, uint8_t garb) {  // 0x15
-  val = readZeroPage(val+regs.x) | regs.a;
-  SZFlags(val);
-  regs.a = val;
-}
-
-void ora_abs(uint8_t lower, uint8_t upper) {  
-  uint16_t addr = (upper << 8) + lower;
-  lower = readByte(addr) | regs.a;
-  SZFlags(lower);
-  regs.a = lower;
-}
-
-void ora_abs_x(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower + regs.x;
-  lower = readByte(addr) | regs.a;
-  SZFlags(lower);
-  regs.a = lower;
-  updateCycle(addr, regs.x);
-}
-
-void ora_abs_y(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower + regs.y;
-  lower = readByte(addr) | regs.a;
-  SZFlags(lower);
-  regs.a = lower;
-  updateCycle(addr, regs.x);
-}
-
-void tax(uint8_t garb0, uint8_t garb1) {
+void tax(void) {
   regs.x = regs.a;
   SZFlags(regs.x);  
 }
 
-void txa(uint8_t garb0, uint8_t garb1) {
+void txa(void) {
   regs.a = regs.x;
   SZFlags(regs.a);
 }
 
-void dex(uint8_t garb0, uint8_t garb1) {
+void dex(void) {
   regs.x--;
   SZFlags(regs.x);
 }
 
-void inx(uint8_t garb0, uint8_t garb1) {
+void inx(void) {
   regs.x++;
   SZFlags(regs.x);
 }
 
-void tay(uint8_t garb0, uint8_t garb1) {
+void tay(void) {
   regs.y = regs.a;
   SZFlags(regs.y);
 }
 
-void tya(uint8_t garb0, uint8_t garb1) { 
+void tya(void) { 
   regs.a = regs.y;
   SZFlags(regs.a);
 }
 
-void dey(uint8_t garb0, uint8_t garb1) { 
+void dey(void) { 
   regs.y--;
   SZFlags(regs.y);
 }
 
-void iny(uint8_t garb0, uint8_t garb1) { 
+void iny(void) { 
   regs.y++;
   SZFlags(regs.y);
 }
 
-void rol_acc(uint8_t garb0, uint8_t garb1) { 
-  uint8_t msb = getFlagCarry();
-  setFlagCarry(regs.a >> 7);
-  regs.a = msb | (regs.a << 1);
-  SZFlags(regs.a);
-}
-
-void rol_zp(uint8_t addr, uint8_t garb) {
-  uint8_t msb = getFlagCarry();
-  uint8_t val = readZeroPage(addr);
-  setFlagCarry(val >> 7);
-  val = msb | (val << 1);
-  writeByte(addr, val);
-  SZFlags(val);
-}
-
-void rol_zp_x(uint8_t addr, uint8_t garb) {
-  uint8_t msb = getFlagCarry();
-  addr = regs.x + addr;
-  uint8_t val = readZeroPage(addr);
-  setFlagCarry(val >> 7);
-  val = msb | (val << 1);
-  writeByte(addr, val);
-  SZFlags(val);
-}
-
-void rol_abs(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower;
-  uint8_t msb = getFlagCarry();
-  lower = readByte(addr);
-  setFlagCarry(lower >> 7);
-  lower = msb | (lower << 1);
-  writeByte(addr, lower);
-  SZFlags(lower);
-}
-
-void rol_abs_x(uint8_t lower, uint8_t upper) {
-  uint16_t addr = regs.x + (upper << 8) + lower;
-  uint8_t msb = getFlagCarry();
-  lower = readByte(addr);
-  setFlagCarry(lower >> 7);
-  lower = msb | (lower << 1);
-  writeByte(addr, lower);
-  SZFlags(lower);
-}
-
-void ror_acc(uint8_t garb0, uint8_t garb1) { 
-  uint8_t msb = getFlagCarry() << 7;
-  setFlagCarry(regs.a << 7);
-  regs.a = msb | (regs.a >> 1);
-  SZFlags(regs.a);
-}
-
-void ror_zp(uint8_t addr, uint8_t garb) {
-  uint8_t msb = getFlagCarry() << 7;
-  uint8_t val = readZeroPage(addr);
-  setFlagCarry(val << 7);
-  val = msb | (val >> 1);
-  writeZeroPage(addr, val);
-  SZFlags(val);
-}
-
-void ror_zp_x(uint8_t addr, uint8_t garb) {
-  uint8_t msb = getFlagCarry() << 7;
-  addr = regs.x + addr;
-  uint8_t val = readZeroPage(addr);
-  setFlagCarry(val << 7);
-  val = msb | (val >> 1);
-  writeZeroPage(addr, val);
-  SZFlags(val);
-}
-
-void ror_abs(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower;
-  uint8_t msb = getFlagCarry() << 7;
-  lower = readByte(addr);
-  setFlagCarry(lower << 7);
-  lower = msb | (lower >> 1);
-  writeByte(addr, lower);
-  SZFlags(lower);
-}
-
-void ror_abs_x(uint8_t lower, uint8_t upper) {
-  uint16_t addr = regs.x + (upper << 8) + lower;
-  uint8_t msb = getFlagCarry() << 7;
-  lower = readByte(addr);
-  setFlagCarry(lower << 7);
-  lower = msb | (lower >> 1);
-  writeByte(addr, lower);
-  SZFlags(lower);
-}
-
-void rti(uint8_t garb0, uint8_t garb1) {
+void rti(void) {
   regs.p = (popStack() & 0xEF) | 0x20;
-  regs.pc = popStack() << 8;
-  regs.pc += popStack();
+  regs.pc = popStack();
+  regs.pc |= (popStack() << 8);
   interrupted = 0;
 }
 
-void rts(uint8_t garb0, uint8_t garb1) {
+void rts(void) {
   uint16_t addr = popStack();
   addr += (uint16_t) (popStack() << 8);
   regs.pc = addr;
 }
 
-void sbc_imm(uint8_t val, uint8_t garbage) {
-  val = ~val + 1 - (getFlagCarry() ? 0 : 1);
-  garbage = val + regs.a;
-  VFlag(val, regs.a, garbage);
-  regs.a = garbage;
-  SZFlags(regs.a);
-  (garbage >= 0 && garbage < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
-}
-
-void sbc_zp(uint8_t val, uint8_t garbage) {
-  val = ~readZeroPage(val) + 1 - (getFlagCarry() ? 0 : 1);
-  garbage = val + regs.a;
-  VFlag(val, regs.a, garbage);
-  regs.a = garbage;
-  SZFlags(regs.a);
-  (garbage >= 0 && garbage < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
-}
-
-void sbc_zp_x(uint8_t val, uint8_t garbage) {
-  val = ~readZeroPage(regs.x + val) + 1 - (getFlagCarry() ? 0 : 1);  
-  garbage = val + regs.a;
-  VFlag(val, regs.a, garbage);
-  regs.a = garbage;
-  SZFlags(regs.a);
-  (garbage >= 0 && garbage < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
-}
-
-void sbc_ind_x(uint8_t val, uint8_t garbage) {
-  uint16_t addr;
-  addr = readZeroPage(val + regs.x) + (readZeroPage(val + regs.x + 1) << 8);
-  val = ~readByte(addr) + 1 - (getFlagCarry() ? 0 : 1);
-  garbage = val + regs.a;
-  VFlag(val, regs.a, garbage);
-  regs.a = garbage;
-  SZFlags(regs.a);
-  (garbage >= 0 && garbage < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
-}
-
-void sbc_ind_y(uint8_t val, uint8_t garbage) {
-  uint16_t addr;
-  addr = readZeroPage(val) + (readZeroPage(val + 1) << 8);
-  addr += regs.y;
-  val = ~readByte(addr) + 1 - (getFlagCarry() ? 0 : 1);
-  garbage = val + regs.a;
-  VFlag(val, regs.a, garbage);
-  regs.a = garbage;
-  SZFlags(regs.a);
-  (garbage >= 0 && garbage < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
-  updateCycle(addr, regs.y);
-}
-
-void sbc_abs(uint8_t lower, uint8_t upper) {
-  uint8_t res;
-  uint16_t addr;
-  addr = (upper << 8) + lower;
-  lower = ~readByte(addr) + 1 - (getFlagCarry() ? 0 : 1);
-  res = lower + regs.a;
-  VFlag(lower, regs.a, res);
-  regs.a = res;
-  SZFlags(regs.a);
-  (res >= 0 && res < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
-}
-
-void sbc_abs_x(uint8_t lower, uint8_t upper) {
-  uint8_t res;
-  uint16_t addr;
-  addr = (upper << 8) + lower + regs.x;
-  lower = ~readByte(addr) + 1 - (getFlagCarry() ? 0 : 1);
-  res = lower + regs.a;
-  VFlag(lower, regs.a, res);
-  regs.a = res;
-  SZFlags(regs.a);
-  (res >= 0 && res < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
-  updateCycle(addr, regs.x);
-}
-
-
-void sbc_abs_y(uint8_t lower, uint8_t upper) {
-  uint8_t res;
-  uint16_t addr;
-  addr = (upper << 8) + lower + regs.y;
-  lower = ~readByte(addr) + 1 - (getFlagCarry() ? 0 : 1);
-  res = lower + regs.a;
-  VFlag(lower, regs.a, res);
-  regs.a = res;
-  SZFlags(regs.a);
-  (res >= 0 && res < 0x80) ? setFlagCarry(1) : setFlagCarry(0);
-  updateCycle(addr, regs.y);
-}
-
-
-void sta_zp(uint8_t val, uint8_t garbage) {
-  writeZeroPage(val, regs.a);
-}
-
-void sta_zp_x(uint8_t val, uint8_t garbage) {
-  writeZeroPage(val + regs.x, regs.a);
-}
-
-void sta_ind_x(uint8_t val, uint8_t garbage) {
-  uint16_t addr = readZeroPage(val + regs.x) + (readZeroPage(val + regs.x + 1) << 8);
-  writeByte(addr, regs.a);
-}
-
-void sta_ind_y(uint8_t val, uint8_t garbage) {
-  uint16_t addr = readZeroPage(val) + (readZeroPage(val + 1) << 8);
-  writeByte(addr + regs.y, regs.a);
-}
-
-void sta_abs(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower;
-  writeByte(addr, regs.a);
-}
-
-void sta_abs_x(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower + regs.x;
-  writeByte(addr, regs.a);
-}
-
-void sta_abs_y(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower + regs.y;
-  writeByte(addr, regs.a);
-}
-
-void txs(uint8_t garb0, uint8_t garb1) { 
+void txs(void) { 
   regs.sp = regs.x;
 }
 
-void tsx(uint8_t garb0, uint8_t garb1) {
+void tsx(void) {
   regs.x = regs.sp;
   SZFlags(regs.x);
 }
 
-void pha(uint8_t garb0, uint8_t garb1) { pushStack(regs.a); }
+void pha(void) { pushStack(regs.a); }
 
-void pla(uint8_t garb0, uint8_t garb1) { 
+void pla(void) { 
   regs.a = popStack();
   SZFlags(regs.a);
 }
 
-void php(uint8_t garb0, uint8_t garb1) { pushStack(regs.p | 0x10); }
+void php(void) { pushStack(regs.p | 0x10); }
 
-void plp(uint8_t garb0, uint8_t garb1) { 
+void plp(void) { 
   regs.p = (popStack() & 0xEF) | 0x20;
-}
-
-void stx_zp(uint8_t val, uint8_t garb) { writeZeroPage(val, regs.x); }
-
-void stx_zp_y(uint8_t val, uint8_t garb) { writeZeroPage(val+regs.y, regs.x); }
-
-void stx_abs(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower;
-  writeByte(addr, regs.x);
-}
-
-void sty_zp(uint8_t val, uint8_t garb) { writeZeroPage(val, regs.y); }
-
-void sty_zp_x(uint8_t val, uint8_t garb) { writeZeroPage(val+regs.x, regs.y); }
-
-void sty_abs(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower;
-  writeByte(addr, regs.y);
 }
 
 /*************************************/
 /* START OF UNOFFICIAL OPCODE FUNCTIONS*/
 /*************************************/
 
-void lax_abs(uint8_t lower, uint8_t upper) {
-  lda_abs(lower, upper);
-  ldx_abs(lower, upper);
+
+/**
+ * @brief performs a load into accumulator and X register
+ * @modes ZP, ZP_Y, IND_X, IND_Y, ABS, ABS_Y
+ * @param arg1, arg2: first and second instruction operands.
+ *        If instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void lax(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  lda(mode, arg1, arg2);
+  ldx(mode, arg1, arg2);
 }
 
-void lax_abs_y(uint8_t lower, uint8_t upper) {
-  lda_abs_y(lower, upper);
-  ldx_abs_y(lower, upper);
-}
 
-void lax_zp(uint8_t val, uint8_t garb) {
-  lda_zp(val, garb);
-  ldx_zp(val, garb);
-}
-
-void lax_zp_y(uint8_t val, uint8_t garb) {
-  val = readZeroPage(val + regs.y);
-  regs.a = val;
-  regs.x = val;
-  SZFlags(regs.a);
-}
-
-void lax_ind_x(uint8_t val, uint8_t garb) {
-  
-  uint16_t addr = (readZeroPage(val + regs.x + 1) << 8) + readZeroPage(val + regs.x);
-  val = readByte(addr);
-  regs.a = val;
-  regs.x = val;
-  SZFlags(regs.a);
-}
-
-void lax_ind_y(uint8_t val, uint8_t garb) {
-  uint16_t addr = (readZeroPage(val + 1) << 8) + readZeroPage(val);
-  val = readByte(addr + regs.y);
-  regs.a = val;
-  regs.x = val;
-  SZFlags(regs.a);
-} 
-
-void sax(uint8_t val, uint8_t garb) {
+void sax(AddressMode unused, uint8_t val) {
   val = (regs.a & regs.x) - val;
   setFlagCarry((val > (regs.a & regs.x)) ? 1 : 0);
   SZFlags(val);
 }
 
-void axs_abs(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower;
-  writeByte(addr, regs.a & regs.x);
+
+/**
+ * @brief performs a store into memory of accumulator AND X register
+ * @modes ZP, ZP_Y, IND_X, ABS
+ * @param arg1, arg2: first and second instruction operands.
+ *        If instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void axs(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  dataWriteBack(regs.a & regs.x, mode, arg1, arg2);
 }
 
-void axs_zp(uint8_t val, uint8_t garb) {
-  writeZeroPage(val, regs.a & regs.x);
+
+
+/**
+ * @brief performs a decrement followed by a compare instruction
+ * @modes ZP, ZP_X, IND_X, IND_Y, ABS, ABS_X, ABS_Y
+ * @param arg1, arg2: first and second instruction operands.
+ *        If instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void dcm(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  dec(mode, arg1, arg2);
+  cmp(mode, arg1, arg2);
 }
 
-void axs_zp_y(uint8_t val, uint8_t garb) {
-  writeZeroPage(val + regs.y, regs.a & regs.x);
-}
-
-void axs_ind_x(uint8_t val, uint8_t garb) {
-  uint16_t addr = (readZeroPage(val + 1 + regs.x) << 8) + readZeroPage(val + regs.x);
-  writeByte(addr, regs.a & regs.x);
-}
-
-void dcm_abs(uint8_t lower, uint8_t upper) {
-  dec_abs(lower, upper);
-  cmp_abs(lower, upper);
-}
-
-void dcm_abs_x(uint8_t lower, uint8_t upper) {
-  dec_abs_x(lower, upper);
-  cmp_abs_x(lower, upper);
-}
-
-void dcm_abs_y(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower;
-  writeByte(addr, readByte(addr + regs.y) - 1);
-  cmp_abs_y(lower, upper);
-}
-
-void dcm_zp(uint8_t val, uint8_t garb) {
-  dec_zp(val, garb);
-  cmp_zp(val, garb);
-}
-
-void dcm_zp_x(uint8_t val, uint8_t garb) {
-  dec_zp_x(val, garb);
-  cmp_zp_x(val, garb);
-}
-
-void dcm_ind_x(uint8_t val, uint8_t garb) {
-  uint16_t addr = (readZeroPage(val + 1 + regs.x) << 8) + readZeroPage(val + regs.x);
-  writeByte(addr, readByte(addr) - 1);
-  cmp_ind_x(val, garb);
-}
-
-void dcm_ind_y(uint8_t val, uint8_t garb) {
-  uint16_t addr = (readZeroPage(val + 1) << 8) + readZeroPage(val);
-  writeByte(addr + regs.y, readByte(addr + regs.y) - 1);
-  cmp_ind_y(val, garb);
-}
-
-void isb_abs(uint8_t lower, uint8_t upper) {
+/**
+ * @brief performs an increment followed by a subtract with carry
+ * @modes ZP, ZP_X, IND_X, IND_Y, ABS, ABS_X, ABS_Y
+ * @param arg1, arg2: first and second instruction operands.
+ *        If instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void isb(AddressMode mode, uint8_t arg1, uint8_t arg2) {
   uint8_t carry = getFlagCarry();
-  inc_abs(lower, upper);
-  sbc_abs(lower, upper);
+  inc(mode, arg1, arg2);
+  sbc(mode, arg1, arg2);
   setFlagCarry(carry);
 }
 
-void isb_abs_x(uint8_t lower, uint8_t upper) {
-  uint8_t carry = getFlagCarry();
-  inc_abs_x(lower, upper);
-  sbc_abs_x(lower, upper);
-  setFlagCarry(carry);
-}
 
-void isb_abs_y(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower;
-  uint8_t carry = getFlagCarry();
-  writeByte(addr + regs.y, readByte(addr + regs.y) + 1); 
-  SZFlags(readByte(addr));
-  sbc_abs_y(lower, upper);
-  setFlagCarry(carry);
-}
-
-void isb_zp(uint8_t val, uint8_t garb) {
-  inc_zp(val, garb);
-  garb = getFlagCarry();
-  sbc_zp(val, garb);
-  setFlagCarry(garb);
-}
-
-void isb_zp_x(uint8_t val, uint8_t garb) {
-  inc_zp_x(val, garb);
-  garb = getFlagCarry();
-  sbc_zp_x(val, garb);
-  setFlagCarry(garb);
-}
-
-void isb_ind_x(uint8_t val, uint8_t garb) {
-  uint16_t addr = (readZeroPage(val + 1 + regs.x) << 8) + readZeroPage(val + regs.x);
-  writeByte(addr, readByte(addr) + 1);
-  SZFlags(readByte(addr));
-  garb = getFlagCarry();
-  sbc_ind_x(val, garb);
-  setFlagCarry(garb);
-}
-
-void isb_ind_y(uint8_t val, uint8_t garb) {
-  uint16_t addr = (readZeroPage(val + 1) << 8) + readZeroPage(val);
-  writeByte(addr + regs.y, readByte(addr + regs.y) + 1);
-  SZFlags(readByte(addr));
-  garb = getFlagCarry();
-  sbc_ind_y(val, garb);
-  setFlagCarry(garb);
-}
-
-void slo_abs(uint8_t lower, uint8_t upper) {
-  asl_abs(lower, upper);
-  ora_abs(lower, upper);
-}
-
-void slo_abs_x(uint8_t lower, uint8_t upper) {
-  asl_abs_x(lower, upper);
-  ora_abs_x(lower, upper);
-}
-
-void slo_abs_y(uint8_t lower, uint8_t upper) {
-  uint16_t addr = (upper << 8) + lower + regs.y;
-  lower = readByte(addr);
-  setFlagCarry(getBit(lower, 7));
-  writeByte(addr, lower << 1);
-  ora_abs_y(lower, upper);
-}
-
-void slo_zp(uint8_t val, uint8_t garb) {
-  asl_zp(val, garb);
-  ora_zp(val, garb);
-}
-
-void slo_zp_x(uint8_t val, uint8_t garb) {
-  asl_zp_x(val, garb);
-  ora_zp_x(val, garb);
-}
-
-void slo_ind_x(uint8_t val, uint8_t garb) {
-  uint16_t addr = (readZeroPage(val + regs.x + 1) << 8) + readZeroPage(val + regs.x);
-  garb = readByte(addr);
-  setFlagCarry(getBit(garb, 7));
-  writeByte(addr, (garb << 1));
-  ora_ind_x(val, garb);
-}
-
-void slo_ind_y(uint8_t val, uint8_t garb) {
-  uint16_t addr = (readZeroPage(val + 1) << 8) + readZeroPage(val);
-  garb = readByte(addr + regs.y);
-  setFlagCarry(getBit(garb, 7));
-  writeByte(addr + regs.y, garb << 1);
-  ora_ind_y(val, garb);
+/**
+ * @brief performs an arithmetic shift left followed by an or with accumulator
+ * @modes ZP, ZP_X, IND_X, IND_Y, ABS, ABS_X, ABS_Y
+ * @param arg1, arg2: first and second instruction operands.
+ *        If instruction has no second argument,
+ *        arg2 is disregarded.
+ * @param mode: addressing mode of instruction
+ */
+void slo(AddressMode mode, uint8_t arg1, uint8_t arg2) {
+  asl(mode, arg1, arg2);
+  ora(mode, arg1, arg2);
 }
 
 /**
@@ -1542,7 +1062,7 @@ const struct opcode opcodes[256] = {
   {"NOP", INVALID, 2},
   {"STA", INDIRECT_X, 2},
   {"NOP", INVALID, 2},
-  {"AXS", INDIRECT_Y, 2},
+  {"SAX", INDIRECT_X, 2},
   {"STY", ZERO_PAGE, 2},
   {"STA", ZERO_PAGE, 2},
   {"STX", ZERO_PAGE, 2},
@@ -1561,7 +1081,7 @@ const struct opcode opcodes[256] = {
   {"NAN", INVALID, 0},
   {"STY", ZERO_PAGE_X, 2},
   {"STA", ZERO_PAGE_X, 2},
-  {"STX", ZERO_PAGE_X, 2},
+  {"STX", ZERO_PAGE_Y, 2},
   {"AXS", ZERO_PAGE_Y, 2},
   {"TYA", IMPLIED, 1},
   {"STA", ABSOLUTE_Y, 3},
@@ -1670,38 +1190,38 @@ const struct opcode opcodes[256] = {
 };
 
 FunctionExecute functions[0x100] = {
-  brk, ora_ind_x, nan, slo_ind_x, nop, ora_zp, asl_zp, slo_zp,
-  php, ora_imm, asl_acc, nan, nop, ora_abs, asl_abs, slo_abs,         // 0x0F
-  bpl, ora_ind_y, nan, slo_ind_y, nop, ora_zp_x, asl_zp_x, slo_zp_x,
-  clc, ora_abs_y, nop, slo_abs_y, nop, ora_abs_x, asl_abs_x, slo_abs_x,       // 0x1F
-  jsr, and_ind_x, nan, nan, bit_zp, and_zp, rol_zp, nan,
-  plp, and_imm, rol_acc, nan, bit_abs, and_abs, rol_abs, nan,     // 0x2F
-  bmi, and_ind_y, nan, nan, nop, and_zp_x, rol_zp_x, nan,
-  sec, and_abs_y, nop, nan, nop, and_abs_x, rol_abs_x, nan,       // 0x3F
-  rti, eor_ind_x, nan, nan, nop, eor_zp, lsr_zp, nan,
-  pha, eor_imm, lsr_acc, nan, jmp_abs, eor_abs, lsr_abs, nan,     // 0x4F
-  bvc, eor_ind_y, nan, nan, nop, eor_zp_x, lsr_zp_x, nan,
-  cli, eor_abs_y, nop, nan, nop, eor_abs_x, lsr_abs_x, nan,       // 0x5F
-  rts, adc_ind_x, nan, nan, nop, adc_zp, ror_zp, nan,
-  pla, adc_imm, ror_acc, nan, jmp_ind, adc_abs, ror_abs, nan,     // 0x6F
-  bvs, adc_ind_y, nan, nan, nop, adc_zp_x, ror_zp_x, nan, 
-  sei, adc_abs_y, nop, nan, nop, adc_abs_x, ror_abs_x, nan,       // 0x7F
-  nop, sta_ind_x, nop, axs_ind_x, sty_zp, sta_zp, stx_zp, axs_zp,
-  dey, nan, txa, nan, sty_abs, sta_abs, stx_abs, axs_abs,             // 0x8F
-  bcc, sta_ind_y, nan, nan, sty_zp_x, sta_zp_x, stx_zp_y, axs_zp_y,
-  tya, sta_abs_y, txs, nan, nan, sta_abs_x, nan, nan,             // 0x9F
-  ldy_imm, lda_ind_x, ldx_imm, lax_ind_x, ldy_zp, lda_zp, ldx_zp, lax_zp,
-  tay, lda_imm, tax, nan, ldy_abs, lda_abs, ldx_abs, lax_abs,         // 0xAF
-  bcs, lda_ind_y, nan, lax_ind_y, ldy_zp_x, lda_zp_x, ldx_zp_y, lax_zp_y,
-  clv, lda_abs_y, tsx, nan, ldy_abs_x, lda_abs_x, ldx_abs_y, lax_abs_y, // 0xBF
-  cpy_imm, cmp_ind_x, nop, dcm_ind_x, cpy_zp, cmp_zp, dec_zp, dcm_zp,
-  iny, cmp_imm, dex, sax, cpy_abs, cmp_abs, dec_abs, dcm_abs,         // 0xCF
-  bne, cmp_ind_y, nan, dcm_ind_y, nop, cmp_zp_x, dec_zp_x, dcm_zp_x, 
-  cld, cmp_abs_y, nop, dcm_abs_y, nop, cmp_abs_x, dec_abs_x, dcm_abs_x,       // 0xDF
-  cpx_imm, sbc_ind_x, nop, isb_ind_x, cpx_zp, sbc_zp, inc_zp, isb_zp, 
-  inx, sbc_imm, nop, sbc_imm, cpx_abs, sbc_abs, inc_abs, isb_abs,         // 0xEF
-  beq, sbc_ind_y, nan, isb_ind_y, nop, sbc_zp_x, inc_zp_x, isb_zp_x, 
-  sed, sbc_abs_y, nop, isb_abs_y, nop, sbc_abs_x, inc_abs_x, isb_abs_x        // 0xFF
+  brk, ora, nan, slo, nop, ora, asl, slo,
+  php, ora, asl, nan, nop, ora, asl, slo,  // 0x0F
+  bpl, ora, nan, slo, nop, ora, asl, slo,
+  clc, ora, nop, slo, nop, ora, asl, slo,  // 0x1F
+  jsr, and, nan, nan, bit, and, rol, nan,
+  plp, and, rol, nan, bit, and, rol, nan,  // 0x2F
+  bmi, and, nan, nan, nop, and, rol, nan,
+  sec, and, nop, nan, nop, and, rol, nan,  // 0x3F
+  rti, eor, nan, nan, nop, eor, lsr, nan,
+  pha, eor, lsr, nan, jmp, eor, lsr, nan,  // 0x4F
+  bvc, eor, nan, nan, nop, eor, lsr, nan,
+  cli, eor, nop, nan, nop, eor, lsr, nan,  // 0x5F
+  rts, adc, nan, nan, nop, adc, ror, nan,
+  pla, adc, ror, nan, jmp, adc, ror, nan,  // 0x6F
+  bvs, adc, nan, nan, nop, adc, ror, nan, 
+  sei, adc, nop, nan, nop, adc, ror, nan,  // 0x7F
+  nop, sta, nop, sax, sty, sta, stx, sax,
+  dey, nan, txa, nan, sty, sta, stx, sax,  // 0x8F
+  bcc, sta, nan, nan, sty, sta, stx, sax,
+  tya, sta, txs, nan, nan, sta, nan, nan,  // 0x9F
+  ldy, lda, ldx, lax, ldy, lda, ldx, lax,
+  tay, lda, tax, nan, ldy, lda, ldx, lax,  // 0xAF
+  bcs, lda, nan, lax, ldy, lda, ldx, lax,
+  clv, lda, tsx, nan, ldy, lda, ldx, lax,  // 0xBF
+  cpy, cmp, nop, dcm, cpy, cmp, dec, dcm,
+  iny, cmp, dex, sax, cpy, cmp, dec, dcm,  // 0xCF
+  bne, cmp, nan, dcm, nop, cmp, dec, dcm, 
+  cld, cmp, nop, dcm, nop, cmp, dec, dcm,  // 0xDF
+  cpx, sbc, nop, isb, cpx, sbc, inc, isb, 
+  inx, sbc, nop, sbc, cpx, sbc, inc, isb,  // 0xEF
+  beq, sbc, nan, isb, nop, sbc, inc, isb, 
+  sed, sbc, nop, isb, nop, sbc, inc, isb   // 0xFF
 };
 
 
@@ -1755,6 +1275,7 @@ void step(void) {
   uint8_t time = cycles[opcode];
   uint8_t len = opcodes[opcode].operands;
   unsigned char * opname = opcodes[opcode].code;
+  AddressMode mode = opcodes[opcode].addrMode;
   uint8_t arg1, arg2;
   arg1 = readByte(regs.pc + 1);
   arg2 = readByte(regs.pc + 2);
@@ -1762,7 +1283,15 @@ void step(void) {
     fprintf(logFile, "%x, %x %x %x %s  A:%x X:%x Y:%x P:%x SP:%x CYCLE:%d\n",
       regs.pc, opcode, arg1, arg2, opname, regs.a, regs.x, regs.y, regs.p, regs.sp, cycle); 
   }
-  functions[opcode](arg1, arg2);
+  if (len == 1) {
+    functions[opcode].FunctionEx_1Arg(mode);
+  } else if (len == 2) {
+    functions[opcode].FunctionEx_2Arg(mode, arg1);
+  } else if (len == 3) {
+    functions[opcode].FunctionEx_3Arg(mode, arg1, arg2);
+  } else { 
+    functions[opcode].FunctionEx_0Arg();
+  }
   cycle += time;
   regs.pc += (strcmp(opname, "JSR") != 0 &&
               strcmp(opname, "JMP") != 0 &&
