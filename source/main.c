@@ -168,11 +168,14 @@ int main(int argc, char **argv) {
   // Initialize the picture display.
   displayInit();
   // Run the emulator display and perform CPU step.
+  uint32_t cyclesPast = 0, currCycle;
   while (1) {
-    step();
-    ppuStep();
-    ppuStep();
-    ppuStep();
+    currCycle = step();
+    while (cyclesPast++ < currCycle) {
+      ppuStep();
+      ppuStep();
+      ppuStep();
+    }
     if (!getDisplayStatus()) break;
   }
   // Free dynamically allocated memory.

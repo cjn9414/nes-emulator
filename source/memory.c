@@ -40,7 +40,9 @@ uint8_t readByte(uint16_t addr) {
     switch (addr) {
       case 0x2002:
         ppuRegisters.PPUWriteLatch = 0;
-        return ppuRegisters.PPUStatus;
+	uint8_t val = ppuRegisters.PPUStatus;
+	setVerticalBlankStart(0);
+        return val;
       case 0x2004:
         return ppuRegisters.OAMData;
       case 0x2007:

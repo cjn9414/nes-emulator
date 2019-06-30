@@ -36,22 +36,22 @@ uint8_t interrupted = 0;
  */
 
 const uint8_t cycles[256] = {
-  7, 6, 0, 0, 0, 3, 5, 0, 3, 2, 2, 0, 0, 4, 6, 0,  // 0x0F
-  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,  // 0x1F
-  6, 6, 0, 0, 3, 3, 5, 0, 4, 2, 2, 0, 4, 4, 6, 0,  // 0x2F
-  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,  // 0x3F
-  6, 6, 0, 0, 0, 3, 5, 0, 3, 2, 2, 0, 3, 4, 6, 0,  // 0x4F
-  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,  // 0x5F
-  6, 6, 0, 0, 0, 3, 5, 0, 4, 2, 2, 0, 5, 4, 6, 0,  // 0x6F
-  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,  // 0x7F
-  0, 6, 0, 0, 3, 3, 3, 0, 2, 0, 2, 0, 4, 4, 4, 0,  // 0x8F
-  2, 6, 0, 0, 4, 4, 4, 0, 2, 5, 2, 0, 0, 5, 0, 0,  // 0x9F
-  2, 6, 2, 0, 3, 3, 3, 0, 2, 2, 2, 0, 4, 4, 4, 0,  // 0xAF
-  2, 5, 0, 0, 4, 4, 4, 0, 2, 4, 2, 0, 4, 4, 4, 0,  // 0xBF
-  2, 6, 0, 0, 3, 3, 5, 0, 2, 2, 2, 0, 4, 4, 6, 0,  // 0xCF
-  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,  // 0xDF
-  2, 6, 0, 0, 3, 3, 5, 0, 2, 2, 2, 0, 4, 4, 6, 0,  // 0xEF
-  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0   // 0xFF
+  7, 6, 0, 8, 3, 3, 5, 5, 3, 2, 2, 2, 4, 4, 6, 6,  // 0x0F
+  2, 5, 0, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,  // 0x1F
+  6, 6, 0, 8, 3, 3, 5, 5, 4, 2, 2, 2, 4, 4, 6, 6,  // 0x2F
+  2, 5, 0, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,  // 0x3F
+  6, 6, 0, 8, 3, 3, 5, 5, 3, 2, 2, 2, 3, 4, 6, 6,  // 0x4F
+  2, 5, 0, 8, 4, 4, 6, 6, 2, 4, 2, 4, 7, 4, 7, 6,  // 0x5F
+  6, 6, 0, 8, 3, 3, 5, 5, 4, 2, 2, 2, 5, 4, 6, 6,  // 0x6F
+  2, 5, 0, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,  // 0x7F
+  2, 6, 2, 6, 3, 3, 3, 3, 2, 2, 2, 2, 4, 4, 4, 4,  // 0x8F
+  2, 6, 0, 6, 4, 4, 4, 4, 2, 5, 2, 5, 5, 5, 5, 5,  // 0x9F
+  2, 6, 2, 6, 3, 3, 3, 3, 2, 2, 2, 2, 4, 4, 4, 4,  // 0xAF
+  2, 5, 0, 5, 4, 4, 4, 4, 2, 4, 2, 4, 4, 4, 4, 4,  // 0xBF
+  2, 6, 2, 8, 3, 3, 5, 5, 2, 2, 2, 2, 4, 4, 6, 6,  // 0xCF
+  2, 5, 0, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,  // 0xDF
+  2, 6, 2, 8, 3, 3, 5, 5, 2, 2, 2, 2, 4, 4, 6, 6,  // 0xEF
+  2, 5, 0, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7   // 0xFF
 };
 
 /**
@@ -127,19 +127,22 @@ uint8_t getFlagOverflow(void) { return getBit(regs.p, 6); }
 uint8_t getFlagNegative(void) { return getBit(regs.p, 7); }
 
 void NMInterruptHandler() {
+  setFlagBreak(0);
   pushStack(regs.pc >> 8);
   pushStack(regs.pc);
   pushStack(regs.p);
+  setFlagInterrupt(1);
   regs.pc = (readByte(0xFFFB) << 8) + readByte(0xFFFA);
 }
 
 void IRQHandler() {
+  setFlagBreak(0);
   pushStack(regs.pc >> 8);
   pushStack(regs.pc);
   pushStack(regs.p);
+  setFlagInterrupt(1);
   regs.pc = (readByte(0xFFFF) << 8) + readByte(0xFFFE);
   interrupted = 0;
-  setFlagBreak(0);  // may not be kosher
 }
 
 /**
@@ -200,11 +203,13 @@ void SZFlags(uint8_t val) {
  *             program counter backwards.
  */
 void branchJump(uint8_t val) {
-  cycle += 1;
+  cycle++;
   if (!getBit(val, 7)) {
+    //if ( ( (regs.pc + val) ^ regs.pc ) & 0xFF00) cycle++;
     regs.pc += val;
   } else {
     val = ~val + 1;
+    //if ( ( (regs.pc - val) ^ regs.pc ) & 0xFF00) cycle++;
     regs.pc -= val;
   }
 }
@@ -233,6 +238,7 @@ uint8_t fetchArgument(AddressMode mode, uint8_t arg1, uint8_t arg2) {
     case INDIRECT_Y:
       {
       uint16_t addr = readZeroPage(arg1) + (readZeroPage(arg1 + 1) << 8);
+      if ( (addr & 0xFF) + (uint16_t)regs.y > 0x00FF) cycle++;
       addr += regs.y;
       val = readByte(addr);
       break;
@@ -245,13 +251,17 @@ uint8_t fetchArgument(AddressMode mode, uint8_t arg1, uint8_t arg2) {
       }
     case ABSOLUTE_X:
       {
-      uint16_t addr = (arg2 << 8) + arg1 + regs.x;
+      uint16_t addr = (arg2 << 8) + arg1;
+      if ( (addr & 0xFF) + (uint16_t)regs.x  > 0x00FF) cycle++;
+      addr += regs.x;
       val = readByte(addr);
       break;
       }
     case ABSOLUTE_Y:
       {
-      uint16_t addr = (arg2 << 8) + arg1 + regs.y;
+      uint16_t addr = (arg2 << 8) + arg1;
+      if ( (addr & 0xFF) + (uint16_t)regs.y  > 0x00FF) cycle++;
+      addr += regs.y;
       val = readByte(addr);
       break;
       }
@@ -317,7 +327,14 @@ void nan(void) {
   exit(1);
 }
 
-void brk(void) { setFlagBreak(1); }
+void brk(void) {
+  setFlagBreak(1);
+  pushStack(regs.pc >> 8);
+  pushStack(regs.pc);
+  pushStack(regs.p);
+  regs.pc = (readByte(0xFFFF) << 8) + readByte(0xFFFE);
+  interrupted = 0;
+}
 
 /**
  * @brief performs add with carry operation on accumulator register.
@@ -853,17 +870,17 @@ void plp(void) {
  * @param mode: addressing mode of instruction
  */
 void lax(AddressMode mode, uint8_t arg1, uint8_t arg2) {
-  lda(mode, arg1, arg2);
-  ldx(mode, arg1, arg2);
+  uint8_t val = fetchArgument(mode, arg1, arg2);
+  regs.a = val;
+  regs.x = val;
+  SZFlags(val);
 }
 
 
 void sax(AddressMode mode, uint8_t arg1, uint8_t arg2) {
   uint8_t val = fetchArgument(mode, arg1, arg2);
   val = (regs.a & regs.x);// - val;
-  //setFlagCarry((val > (regs.a & regs.x)) ? 1 : 0);
   dataWriteBack(val, mode, arg1, arg2);
-  //SZFlags(val); 
 }
 
 
@@ -890,8 +907,10 @@ void axs(AddressMode mode, uint8_t arg1, uint8_t arg2) {
  * @param mode: addressing mode of instruction
  */
 void dcm(AddressMode mode, uint8_t arg1, uint8_t arg2) {
-  dec(mode, arg1, arg2);
-  cmp(mode, arg1, arg2);
+  uint8_t val = fetchArgument(mode, arg1, arg2) - 1;
+  dataWriteBack(val, mode, arg1, arg2);
+  SZFlags(val);
+  flagCompare(regs.a, val);
 }
 
 /**
@@ -903,10 +922,14 @@ void dcm(AddressMode mode, uint8_t arg1, uint8_t arg2) {
  * @param mode: addressing mode of instruction
  */
 void isb(AddressMode mode, uint8_t arg1, uint8_t arg2) {
-  uint8_t carry = getFlagCarry();
-  inc(mode, arg1, arg2);
-  sbc(mode, arg1, arg2);
-  setFlagCarry(carry);
+  uint8_t val, res;
+  val = fetchArgument(mode, arg1, arg2) + 1;
+  dataWriteBack(val, mode, arg1, arg2);
+  val = ~val + 1 - (getFlagCarry() ? 0 : 1);
+  res = val + regs.a;
+  VFlag(val, regs.a, res);
+  regs.a = res;
+  SZFlags(regs.a);
 }
 
 
@@ -1343,7 +1366,7 @@ void updateCycle(uint16_t addr, uint8_t offset) {
  * and executes it. Increments the stack pointer to
  * the next opcode instruction.
  */
-void step(void) {
+uint32_t step(void) {
   uint8_t opcode = readByte(regs.pc);
   uint8_t time = cycles[opcode];
   uint8_t len = opcodes[opcode].operands;
@@ -1371,15 +1394,17 @@ void step(void) {
               strcmp(opname, "RTI") != 0) ? len : 0;
   if (getVerticalBlankStart()) {
     if (getNMIGeneration() && !interrupted) {
+      setNMIGeneration(0);
       interrupted = 1;
       NMInterruptHandler();
     }
   }
-  if (getFlagBreak()) {
+  else if (!getFlagInterrupt()) {
     if (interrupted == 1) {
       IRQHandler();
     } else if (interrupted == 0) {
       interrupted = 7;
     } else interrupted--;
   }
+  return cycle;
 }

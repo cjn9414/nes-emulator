@@ -241,14 +241,16 @@ void ppuStep(void) {
       cycleType = STANDARD_FETCH;
       if (scanCount == 0) {
         lineType = VISIBLE;
-        setVerticalBlankStart(0);
       }
       else if (scanCount == 240) lineType = POST_RENDER;
       else if (scanCount == 241) {
         lineType = V_BLANK;
         setVerticalBlankStart(1);
       }
-      else if (scanCount == 261) lineType = PRE_RENDER;
+      else if (scanCount == 261) {
+	lineType = PRE_RENDER;
+        setVerticalBlankStart(0);
+      }
       break;
     case 241:
       cycleType = UNUSED_FETCH;
