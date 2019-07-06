@@ -384,77 +384,23 @@ uint8_t readPictureByte(uint16_t addr) {
   // Addressing second pattern table in PPU memory.
   else if (addr < 0x2000) {
     return pTable1[addr - 0x1000];
-  } 
-
-  switch(mirror) {
-    printf("x", mirror);
-    case HORIZONTAL:
-      {
-      uint8_t first = (addr < 0x2800 ? 1 : 0);
-      addr = addr % 0x400;
-      if (addr < 0x3C0) {
-	if (first) return nTable0.tbl[addr];
-	else return nTable1.tbl[addr];
-      }
-      else {
-	if (first) return nTable0.attr[addr - 0x3C0];
-	return nTable1.attr[addr - 0x3C0];
-      }
-      break;
-      }
-
-    case VERTICAL:
-      addr = 0x2000 + ( addr % 0x800 );
-      if (addr < 0x23C0) return nTable0.tbl[addr - 0x2000];
-      else if (addr < 0x2400) return nTable0.attr[addr - 0x23C0];
-      else if (addr < 0x27C0) return nTable1.tbl[addr - 0x2400];
-      else return nTable1.attr[addr - 0x27C0];
-      break;
-
-    case ONE_SCREEN:
-      addr = 0x2000 + ( addr % 0x400 );
-      if (addr < 0x23C0) return nTable0.tbl[addr - 0x2000];
-      else return nTable0.attr[addr - 0x23C0];
-      break;
-
-    case FOUR_SCREEN:
-      // Addressing first name table in PPU memory.
-      if (addr < 0x23C0) {
-        return nTable0.tbl[addr - 0x2000];
-      }
-      // Addressing first attribute table in PPU memory.
-      else if (addr < 0x2400) {
-        return nTable0.attr[addr - 0x23C0];
-      }
-      // Addressing second name table in PPU memory.
-      else if (addr < 0x27C0) {
-        return nTable1.tbl[addr - 0x2400];
-      }
-      // Addressing second attribute table in PPU memory.
-      else if (addr < 0x2800) { 
-        return nTable1.attr[addr - 0x27C0];
-      }
-      // Addressing third name table in PPU memory.
-      else if (addr < 0x2BC0) { 
-        return nTable2.tbl[addr - 0x2800];
-      } 
-      // Addressing third attribute table in PPU memory.
-      else if (addr < 0x2C00) { 
-        return nTable2.attr[addr - 0x2BC0];
-      }
-      // Addressing fourth name table in PPU memory.
-      else if (addr < 0x2FC0) { 
-        return nTable3.tbl[addr - 0x2C00];
-      }
-      // Addressing fourth attribute table in PPU memory.
-      else {
-        return nTable3.attr[addr - 0x2FC0];
-      }
-      break;
+  } else { 
+    uint8_t tbl;
+    fetchEffectiveNametableAddress(&addr, &tbl);
+    switch(tbl) {
+      case 0:
+        return (addr < 0x3C0 ? nTable0.tbl[addr] : nTable0.attr[addr - 0x3C0]);
+      case 1:  
+        return (addr < 0x3C0 ? nTable1.tbl[addr] : nTable1.attr[addr - 0x3C0]);
+      case 2:  
+        return (addr < 0x3C0 ? nTable2.tbl[addr] : nTable2.attr[addr - 0x3C0]);
+      case 3:  
+        return (addr < 0x3C0 ? nTable3.tbl[addr] : nTable3.attr[addr - 0x3C0]);
+    }
   }
 }
 
-
+int i = 0;
 void writePictureByte() {
   uint16_t addr = ppuRegisters.PPUWriteLatch;
   uint8_t data = ppuRegisters.PPUData;
@@ -469,35 +415,55 @@ void writePictureByte() {
   } 
   else if (addr < 0x2000) {
     pTable1[addr-0x1000] = data;
-  } 
-  else if (addr < 0x23C0) {
-    nTable0.tbl[addr-0x2000] = data;
   }
-  else if (addr < 0x2400) {
-    nTable0.attr[addr-0x23C0] = data;
-  } 
-  else if (addr < 0x27C0) {
-    nTable1.tbl[addr-0x2400] = data;
-  } 
-  else if (addr < 0x2800) {
-    nTable1.attr[addr-0x27C0] = data;
-  } 
-  else if (addr < 0x2BC0) {
-    nTable2.tbl[addr-0x2800] = data;
-  } 
-  else if (addr < 0x2C00) {
-    nTable2.attr[addr-0x2BC0] = data;
-  } 
-  else if (addr < 0x2FC0) {
-    nTable3.tbl[addr-0x2C00] = data;
-  } 
-  else if (addr < 0x3000) {
-    nTable3.attr[addr-0x2FC0] = data;
-  } 
+  else if (addr < 0x3F00) {
+    uint8_t tbl;
+    fetchEffectiveNametableAddress(&addr, &tbl);
+    switch(tbl) {
+      case 0:
+        *(addr < 0x3C0 ? nTable0.tbl + addr : nTable0.attr + addr - 0x3C0) = data;
+        break;
+      case 1:  
+        *(addr < 0x3C0 ? nTable1.tbl + addr : nTable1.attr + addr - 0x3C0) = data;
+        break;
+      case 2:  
+        *(addr < 0x3C0 ? nTable2.tbl + addr : nTable2.attr + addr - 0x3C0) = data;
+        break;
+      case 3:  
+        *(addr < 0x3C0 ? nTable3.tbl + addr : nTable3.attr + addr - 0x3C0) = data;
+        break;
+  
+    }
+  }
   else if (addr < 0x3F10) {
     imagePalette[addr-0x3F00] = data;
   } 
   else spritePalette[addr-0x3F10] = data;
+}
+
+
+void fetchEffectiveNametableAddress(uint16_t *addr, uint8_t *tbl) {
+  switch(mirror) {
+    case HORIZONTAL:
+      {
+      *tbl = (*addr < 0x2800 ? 0 : 1);
+      break;
+      }
+
+    case VERTICAL:
+      *addr = 0x2000 + ( *addr % 0x800 );
+      *tbl = (*addr < 0x2400 ? 0 : 1);
+      break;
+
+    case ONE_SCREEN:
+      *tbl = 0;
+      break;
+
+    case FOUR_SCREEN:
+      *tbl = (*addr - 0x2000) / 0x400;
+      break;
+  }
+  *addr = *addr % 0x400;
 }
 
 
