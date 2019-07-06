@@ -163,6 +163,7 @@ int main(int argc, char **argv) {
   // Load the on-power status of the memory mapper and the cpu registers.
   
   mapperSetup();
+  setMirroring(head.mirror);
   cpuRegisterPowerup(&regs);
   ppuRegisterPowerup();
   // Initialize the picture display.

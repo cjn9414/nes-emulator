@@ -223,8 +223,8 @@ void flushPixelBuffer(void) {
  * Maps each virtual name table to a physical name table using
  * 2KB of RAM in the game cartridge.
  */
-void setMirroring(enum MirroringType newMirror) {
-    mirror = newMirror;
+void setMirroring(uint8_t new_mirror) {
+    mirror = (new_mirror ? VERTICAL : HORIZONTAL);
 }
 
 
@@ -269,7 +269,6 @@ void ppuStep(void) {
     default:
       break;
   }
-  
   if (cycleCount < 65) {
     secondaryOAM[ cycleCount % 32 ] = 0xFF;
   } else if (cycleCount <= 256) {
@@ -381,42 +380,77 @@ uint8_t readPictureByte(uint16_t addr) {
   // Addressing first pattern table in PPU memory.
   if (addr < 0x1000) {
     return pTable0[addr];
-  } 
+  }
   // Addressing second pattern table in PPU memory.
   else if (addr < 0x2000) {
     return pTable1[addr - 0x1000];
   } 
-  // Addressing first name table in PPU memory.
-  else if (addr < 0x23C0) {
-    return nTable0.tbl[addr - 0x2000];
-  }
-  // Addressing first attribute table in PPU memory.
-  else if (addr < 0x2400) {
-    return nTable0.attr[addr - 0x23C0];
-  }
-  // Addressing second name table in PPU memory.
-  else if (addr < 0x27C0) {
-    return nTable1.tbl[addr - 0x2400];
-  }
-  // Addressing second attribute table in PPU memory.
-  else if (addr < 0x2800) { 
-    return nTable1.attr[addr - 0x27C0];
-  }
-  // Addressing third name table in PPU memory.
-  else if (addr < 0x2BC0) { 
-    return nTable2.tbl[addr - 0x2800];
-  } 
-  // Addressing third attribute table in PPU memory.
-  else if (addr < 0x2C00) { 
-    return nTable2.attr[addr - 0x2BC0];
-  }
-  // Addressing fourth name table in PPU memory.
-  else if (addr < 0x2FC0) { 
-    return nTable3.tbl[addr - 0x2C00];
-  }
-  // Addressing fourth attribute table in PPU memory.
-  else {
-    return nTable3.attr[addr - 0x2FC0];
+
+  switch(mirror) {
+    printf("x", mirror);
+    case HORIZONTAL:
+      {
+      uint8_t first = (addr < 0x2800 ? 1 : 0);
+      addr = addr % 0x400;
+      if (addr < 0x3C0) {
+	if (first) return nTable0.tbl[addr];
+	else return nTable1.tbl[addr];
+      }
+      else {
+	if (first) return nTable0.attr[addr - 0x3C0];
+	return nTable1.attr[addr - 0x3C0];
+      }
+      break;
+      }
+
+    case VERTICAL:
+      addr = 0x2000 + ( addr % 0x800 );
+      if (addr < 0x23C0) return nTable0.tbl[addr - 0x2000];
+      else if (addr < 0x2400) return nTable0.attr[addr - 0x23C0];
+      else if (addr < 0x27C0) return nTable1.tbl[addr - 0x2400];
+      else return nTable1.attr[addr - 0x27C0];
+      break;
+
+    case ONE_SCREEN:
+      addr = 0x2000 + ( addr % 0x400 );
+      if (addr < 0x23C0) return nTable0.tbl[addr - 0x2000];
+      else return nTable0.attr[addr - 0x23C0];
+      break;
+
+    case FOUR_SCREEN:
+      // Addressing first name table in PPU memory.
+      if (addr < 0x23C0) {
+        return nTable0.tbl[addr - 0x2000];
+      }
+      // Addressing first attribute table in PPU memory.
+      else if (addr < 0x2400) {
+        return nTable0.attr[addr - 0x23C0];
+      }
+      // Addressing second name table in PPU memory.
+      else if (addr < 0x27C0) {
+        return nTable1.tbl[addr - 0x2400];
+      }
+      // Addressing second attribute table in PPU memory.
+      else if (addr < 0x2800) { 
+        return nTable1.attr[addr - 0x27C0];
+      }
+      // Addressing third name table in PPU memory.
+      else if (addr < 0x2BC0) { 
+        return nTable2.tbl[addr - 0x2800];
+      } 
+      // Addressing third attribute table in PPU memory.
+      else if (addr < 0x2C00) { 
+        return nTable2.attr[addr - 0x2BC0];
+      }
+      // Addressing fourth name table in PPU memory.
+      else if (addr < 0x2FC0) { 
+        return nTable3.tbl[addr - 0x2C00];
+      }
+      // Addressing fourth attribute table in PPU memory.
+      else {
+        return nTable3.attr[addr - 0x2FC0];
+      }
+      break;
   }
 }
 
