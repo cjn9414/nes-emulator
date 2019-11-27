@@ -45,7 +45,8 @@ uint32_t preRenderPixels[0x10];
  * program terminates.
  */
 void cleanup(void) {
-  SDL_DestroyRenderer(display.renderer); 
+  
+	SDL_DestroyRenderer(display.renderer); 
   SDL_DestroyWindow(display.window); 
   SDL_DestroyTexture(display.scanlineTexture);
   SDL_Quit();
@@ -172,14 +173,14 @@ uint8_t renderScanline(uint8_t *buffer, uint8_t scanline) {
   }
   SDL_LockTexture(text, NULL, (void **)&pixels, &pitch); 
   Uint32 * scanlinePixels = (Uint32*) pixels;
-  memcpy(scanlinePixels, preRenderPixels, (size_t) 16*sizeof(Uint32));
+  memcpy(scanlinePixels, preRenderPixels, (size_t) 0x10*sizeof(uint32_t));
   for (int tile = 0; tile < 32; tile++) {
     tileIdx = *(buffer + tile); // gets the AT byte for each tile
     uint8_t lowerByte = *(buffer + tile + 32);
     uint8_t upperByte = *(buffer + tile + 64);
     if (scanline % 32 < 16) {
       if (tile % 4 < 2) {
-	upperPaletteIdx = (tileIdx & 0b00000011) << 2;
+				upperPaletteIdx = (tileIdx & 0b00000011) << 2;
       } else {
         upperPaletteIdx = tileIdx & 0b00001100;
       }

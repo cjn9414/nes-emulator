@@ -30,11 +30,14 @@ signed char loadHeader(FILE *file, struct Header* head) {
   // the .nes file, which can then be fed into the 
   // attributes of the struct Header instance.
   uint8_t inspectByte;
-  uint8_t format[3];
+
+	// Three characters + null terminator
+  uint8_t format[4];
+	format[3] = 0;
   
   // Copies data from file into previously declared variable.
   fread(format, sizeof(uint8_t), 3, file);
-  
+
   // All .nes formats must begin with "NES".
   if (strcmp(format, "NES") != 0) return -1;
   
@@ -163,7 +166,7 @@ int main(int argc, char **argv) {
   // Load the on-power status of the memory mapper and the cpu registers.
   
   mapperSetup();
-  setMirroring(head.mirror);
+  setMirroring(head.fourScreenBit ? 3 : head.mirror);
   cpuRegisterPowerup(&regs);
   ppuRegisterPowerup();
   // Initialize the picture display.

@@ -21,6 +21,8 @@
 // 30 standard fetch cycles, two pre-render fetch cycles 
 #define FETCH_CYCLES_PER_SCANLINE 32
 
+#define PIXEL_BUF_SZ 3*FETCH_CYCLES_PER_SCANLINE
+
 // V-blank starts at scanline 241 (post-render line at 240).
 // Pre-render line at scanline 261 (V-blank lasts 20 cycles).
 #define V_BLANK_START 241
@@ -66,7 +68,7 @@ uint8_t spritePalette[0x10];
 /** Four bytes in a fetch cycle
  *  NT Byte, AT Byte, Low BG Tile Byte, High BG Tile Byte
  */
-uint8_t pixelBuffer[3*FETCH_CYCLES_PER_SCANLINE];
+uint8_t pixelBuffer[PIXEL_BUF_SZ];
 
 // Defines the palette for the NES.
 const struct color palette[64] = {
@@ -204,7 +206,7 @@ void fetchHighBGTileByte(uint16_t idx) {
  */
 void flushPixelBuffer(void) {
   renderScanline(pixelBuffer, scanCount);
-  memset(pixelBuffer, 0, sizeof(pixelBuffer));
+  memset(pixelBuffer, 0, sizeof(uint8_t)*PIXEL_BUF_SZ);
 }
 
 /**
@@ -224,7 +226,10 @@ void flushPixelBuffer(void) {
  * 2KB of RAM in the game cartridge.
  */
 void setMirroring(uint8_t new_mirror) {
-    mirror = (new_mirror ? VERTICAL : HORIZONTAL);
+  if (mirror == 0) new_mirror = HORIZONTAL;
+  else if (mirror == 1) new_mirror = VERTICAL;
+  else if (mirror == 2) new_mirror = ONE_SCREEN;
+  else new_mirror = FOUR_SCREEN;
 }
 
 
